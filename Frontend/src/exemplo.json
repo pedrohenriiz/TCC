@@ -1,0 +1,11 @@
+{
+  "persons": {
+    "columns": ["id", "name", "age"],
+    "pk": ["id"]
+  },
+  "orders": {
+    "columns": ["id", "code", "person_id"],
+    "pk": ["id"],
+    "relations": ["persons"]
+  }
+}
