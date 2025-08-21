@@ -1,10 +1,16 @@
 import JsonView from '@uiw/react-json-view';
 import React, { useState } from 'react';
+import { useStore } from '../../store/useStore';
 
 export default function UploadJson() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [jsonContent, setJsonContent] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const setUserDatabaseSchema = useStore(
+    (state) => state.setUserDatabaseSchema
+  );
+  const userDatabaseSchema = useStore((state) => state.userDatabaseSchema);
 
   function wrongFileType(filetype: string) {
     return filetype !== 'application/json';
@@ -29,6 +35,9 @@ export default function UploadJson() {
       try {
         const content = JSON.parse(e.target?.result as string);
         setJsonContent(content);
+
+        // Mudar para salvar apenas quando clicar no botão de salvar
+        setUserDatabaseSchema(content);
       } catch (err) {
         setError('Erro ao ler o arquivo JSON.');
         setJsonContent(null);
@@ -36,6 +45,8 @@ export default function UploadJson() {
     };
     reader.readAsText(file);
   };
+
+  console.log(userDatabaseSchema);
 
   return (
     <div className='flex flex-col gap-4'>

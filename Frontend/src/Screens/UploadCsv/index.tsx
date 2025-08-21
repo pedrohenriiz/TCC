@@ -1,14 +1,18 @@
 // src/pages/UploadCSV.tsx
 import axios from 'axios';
 import React, { useState } from 'react';
+import { useStore } from '../../store/useStore';
 
 export default function UploadCsv() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
 
+  const setCsvColumns = useStore((state) => state.setCsvColumns);
+  const csvColumns = useStore((state) => state.csvColumns);
+
   function wrongFileType(filetype: string) {
-    return filetype !== 'application/json';
+    return filetype !== 'text/csv';
   }
 
   const handleFileUpload = async (
@@ -32,11 +36,19 @@ export default function UploadCsv() {
       formData.append('file', file);
 
       // Substitua pela URL da sua API
-      const response = await axios.post('/api/upload-csv', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await axios.post(
+        'http://localhost:8000/upload-csv',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      console.log(response.data);
+
+      setCsvColumns(response.data.columns);
 
       setMessage(response.data.message || 'Arquivo enviado com sucesso!');
     } catch (error) {
@@ -46,6 +58,8 @@ export default function UploadCsv() {
       setIsLoading(false);
     }
   };
+
+  console.log(csvColumns);
 
   return (
     <div className='p-6 max-w-4xl mx-auto'>

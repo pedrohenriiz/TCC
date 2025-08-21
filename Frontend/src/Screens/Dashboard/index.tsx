@@ -7,7 +7,7 @@ export default function Dashboard() {
   const steps = [
     { name: 'Estrutura do Banco', path: '/upload-json' },
     { name: 'Importar CSVs', path: '/upload-csv' },
-    { name: 'Mapear Campos', path: '/map-fields' },
+    { name: 'Mapear Campos', path: '/column-mapper' },
     { name: 'Gerar SQL', path: '/generate-sql' },
   ];
 
