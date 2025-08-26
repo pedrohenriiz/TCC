@@ -51,16 +51,12 @@ export default function ColumnMapper() {
     formData.append('mapping', JSON.stringify(currentMapping)); // mapping
 
     try {
-      const res = await axios.post(
+      const response = await axios.post(
         'http://localhost:8000/generate-sql',
         formData
       );
 
-      if (!res.ok) {
-        throw new Error('Erro ao gerar SQL');
-      }
-
-      const data = await res.json();
+      const data = await response.json();
       alert('SQL gerado com sucesso! Veja no console.');
     } catch (err) {
       alert('Erro ao enviar para API');

@@ -6,8 +6,7 @@ class ProcessSQL:
         self.sql_generator = sql_generator
 
     def exec(self, schema: Dict[str, Any], mapping: Dict[str, Dict[str, str]], csv_content: str):
-        rows = self.sql_generator.parse_csv(csv_content)
-
+        csv_header, rows = self.sql_generator.parse_csv(csv_content)
         sql_queries = []
 
         for table_name, table_info in schema.items():
@@ -24,7 +23,9 @@ class ProcessSQL:
                         reordered_row.append(None)
                     else:
                         try:
-                            index = list(mapped_columns.values()).index(csv_col)
+                            # index = list(mapped_columns.values()).index(csv_col)
+                            index = csv_header.index(csv_col)
+                            print(index)
                             reordered_row.append(row[index])
                         except ValueError:
                             reordered_row.append(None)
@@ -33,4 +34,4 @@ class ProcessSQL:
 
             sql_queries.append(sql_statements)
         
-        return { "sql": sql_queries }
+        return sql_queries

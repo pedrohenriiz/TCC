@@ -1,11 +1,6 @@
 {
   "persons": {
-    "columns": ["id", "name", "age"],
+    "columns": ["id", "name", "credit_limit"],
     "pk": ["id"]
-  },
-  "orders": {
-    "columns": ["id", "code", "person_id"],
-    "pk": ["id"],
-    "relations": ["persons"]
   }
 }

@@ -5,6 +5,10 @@ from typing import List, Any
 
 class SQLGenerator:
     @staticmethod
+    def escape_string(value: str, quote_char: str)-> str:
+        return value.replace(quote_char, quote_char * 2)
+
+    @staticmethod
     def format_value(value: str):
         v = value.strip()
         
@@ -27,7 +31,9 @@ class SQLGenerator:
             pass
 
         # String padrão
-        return f"'{v}'"
+        quote_char = "'"
+        value = SQLGenerator.escape_string(v,quote_char)
+        return f"{quote_char}{value}{quote_char}"
 
     @staticmethod
     def generate_insert_sql(
@@ -44,7 +50,7 @@ class SQLGenerator:
             # Usa format_value para cada célula
             formatted_values = [SQLGenerator.format_value(str(v)) for v in row]
             
-            sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join(formatted_values)});"
+            sql = f"INSERT INTO {table_name} ({", ".join(columns)}) VALUES ({", ".join(formatted_values)})"
             sql_statements.append(sql)
 
         return sql_statements
@@ -56,5 +62,5 @@ class SQLGenerator:
         """
         csv_file = StringIO(content)
         reader = csv.reader(csv_file)
-        next(reader, None)  # pular cabeçalho
-        return list(reader)
+        header = next(reader)  # primeira linha = cabeçalho
+        return header, list(reader)
