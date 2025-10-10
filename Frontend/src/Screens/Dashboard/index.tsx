@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import Header from '../../components/Header';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -8,12 +9,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50 flex flex-col'>
-      {/* Header */}
-      <header className='bg-white shadow px-6 py-4 flex justify-between items-center'>
-        <h1 className='text-xl font-bold text-gray-800'>Migração de dados</h1>
-      </header>
-
+    <div className='min-h-screen flex flex-col'>
       {/* Main */}
       <main className='flex-1 flex items-center justify-center px-6'>
         <div className='max-w-2xl w-full bg-white shadow-lg rounded-2xl p-8 text-center'>
