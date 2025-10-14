@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { CreditCard, Mail, User, Shield } from 'lucide-react';
-import Header from '../../components/Header';
 import DefaultColumnsTab from './DefaultSettings';
-import DataTypesPage from './DataSettings';
+import PageHeader from '../../components/pageHeader';
 
 export default function SettingsPage() {
   const tabs = ['Colunas padrão'];
@@ -11,17 +9,11 @@ export default function SettingsPage() {
   return (
     <div className='min-h-screen '>
       <div className=' mx-auto bg-white shadow rounded-xl'>
-        <div className='border-b px-8 py-6'>
-          <h2 className='text-2xl font-semibold text-gray-800  text-left'>
-            Configurações
-          </h2>
-          <p className='text-gray-500 text-sm text-left'>
-            Gerencie suas informações e preferências da conta.
-          </p>
+        <div className='p-6'>
+          <PageHeader title='Configurações' />
         </div>
 
-        {/* Tabs */}
-        <div className='flex gap-6 border-b px-8'>
+        <div className='flex gap-6 px-8 bg-gray-50'>
           {tabs.map((tab) => (
             <button
               key={tab}

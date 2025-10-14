@@ -1,92 +1,150 @@
-import { Edit, Trash2 } from 'lucide-react';
+import { Eye, Trash2, Edit, Key, AlertCircle } from 'lucide-react';
+import DataTable from '../../../../components/DataTable';
 
 export default function Table({ columns, handleEditRow, deleteRow }) {
+  console.log(columns);
+
+  // Configuração de cores por tipo de dado
+  const dataTypeConfig = {
+    INT: { color: 'bg-blue-100 text-blue-700' },
+    BIGINT: { color: 'bg-blue-100 text-blue-700' },
+    VARCHAR: { color: 'bg-green-100 text-green-700' },
+    TEXT: { color: 'bg-green-100 text-green-700' },
+    DATETIME: { color: 'bg-purple-100 text-purple-700' },
+    DATE: { color: 'bg-purple-100 text-purple-700' },
+    BOOLEAN: { color: 'bg-yellow-100 text-yellow-700' },
+    DECIMAL: { color: 'bg-orange-100 text-orange-700' },
+    FLOAT: { color: 'bg-orange-100 text-orange-700' },
+  };
+
+  // Definição das colunas da tabela
+  const table_columns = [
+    {
+      key: 'column',
+      header: 'Nome da Coluna',
+      accessor: (row) => row.column_name,
+      sortable: true,
+      searchable: true,
+      headerAlign: 'text-left',
+      cellAlign: 'text-left',
+      render: (_, row) => (
+        <div className='flex items-center gap-2'>
+          <span className='font-mono font-semibold text-gray-800'>
+            {row.column}
+          </span>
+          {row.is_primary_key && (
+            <span className='inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium'>
+              <Key className='w-3 h-3' />
+              PK
+            </span>
+          )}
+          {!row.is_nullable && !row.is_primary_key && (
+            <span className='inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium'>
+              <AlertCircle className='w-3 h-3' />
+              NOT NULL
+            </span>
+          )}
+          {row.is_auto_increment && (
+            <span className='bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium'>
+              AUTO
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'data_type',
+      header: 'Tipo',
+      accessor: (row) => row.data_type,
+      sortable: true,
+      searchable: true,
+      headerAlign: 'text-left',
+      cellAlign: 'text-left',
+      render: (value, row) => {
+        const config = dataTypeConfig[row.type] || {
+          color: 'bg-gray-100 text-gray-700',
+        };
+
+        const typeDisplay = row.max_length
+          ? `${value}(${row.max_length})`
+          : value;
+
+        return (
+          <span
+            className={`inline-flex items-center ${config.color} px-3 py-1 rounded-lg text-sm font-medium font-mono`}
+          >
+            {row.type}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'default_value',
+      header: 'Valor Padrão',
+      accessor: (row) => row.default_value,
+      sortable: true,
+      searchable: true,
+      headerAlign: 'text-left',
+      cellAlign: 'text-left',
+      render: (value, row) => {
+        if (row.value === null) {
+          return <span className='text-gray-400 text-sm italic'>NULL</span>;
+        }
+
+        return (
+          <span className='font-mono text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded'>
+            {row.value}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'actions',
+      header: 'Ações',
+      accessor: () => null,
+      sortable: false,
+      searchable: false,
+      headerAlign: 'text-center',
+      cellAlign: 'text-center',
+      width: '150px',
+      render: (_, row) => (
+        <div className='flex items-center justify-center gap-2'>
+          <button
+            onClick={() => handleView(row)}
+            className='p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition'
+            title='Visualizar detalhes'
+          >
+            <Eye className='w-4 h-4' />
+          </button>
+          <button
+            onClick={() => handleEdit(row)}
+            className='p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition'
+            title='Editar coluna'
+          >
+            <Edit className='w-4 h-4' />
+          </button>
+          <button
+            onClick={() => handleDelete(row)}
+            className='p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition'
+            title='Excluir coluna'
+            disabled={row.is_primary_key}
+          >
+            <Trash2 className='w-4 h-4' />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className='overflow-hidden border border-gray-200 rounded-xl shadow-sm bg-white'>
-      <table className='min-w-full divide-y divide-gray-200'>
-        <thead className='bg-gradient-to-r from-blue-50 to-blue-100'>
-          <tr>
-            <th className='px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
-              Nome da Coluna
-            </th>
-            <th className='px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
-              Tipo
-            </th>
-            <th className='px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider'>
-              Valor Padrão
-            </th>
-            <th className='px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase tracking-wider'>
-              Ações
-            </th>
-          </tr>
-        </thead>
-
-        <tbody className='divide-y divide-gray-100'>
-          {columns.length === 0 ? (
-            <tr>
-              <td
-                colSpan={4}
-                className='px-6 py-8 text-center text-gray-500 italic'
-              >
-                Nenhuma coluna configurada ainda
-              </td>
-            </tr>
-          ) : (
-            columns.map((col) => (
-              <tr
-                key={col.id}
-                className='hover:bg-blue-50 transition-colors duration-150 text-left'
-              >
-                <td className='px-6 py-3 text-sm text-gray-800 font-medium'>
-                  {col.column}
-                </td>
-
-                <td className='px-6 py-3 text-sm text-gray-700'>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      col.type === 'booleano'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : col.type === 'número'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}
-                  >
-                    {col.type}
-                  </span>
-                </td>
-
-                <td className='px-6 py-3 text-sm text-gray-700'>
-                  {col.value === 'true'
-                    ? 'Verdadeiro'
-                    : col.value === 'false'
-                    ? 'Falso'
-                    : col.value}
-                </td>
-
-                <td className='px-6 py-3 text-center'>
-                  <div className='flex justify-center items-center gap-3'>
-                    <button
-                      onClick={() => handleEditRow(col.id)}
-                      className='p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition'
-                      title='Editar'
-                    >
-                      <Edit size={18} />
-                    </button>
-
-                    <button
-                      onClick={() => deleteRow(col.id)}
-                      className='p-2 rounded-lg hover:bg-red-100 text-red-600 transition'
-                      title='Excluir'
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <DataTable
+        columns={table_columns}
+        data={columns}
+        searchable={true}
+        searchPlaceholder='Buscar por nome da coluna, tipo ou valor padrão...'
+        emptyMessage='Nenhuma coluna encontrada'
+      />
     </div>
   );
 }

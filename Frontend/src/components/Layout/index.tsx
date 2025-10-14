@@ -1,9 +1,27 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Settings, Database } from 'lucide-react';
+import { Settings, Database, Table } from 'lucide-react';
 import Header from '../Header';
 
 export default function Layout() {
   const location = useLocation();
+
+  const menu = [
+    {
+      path: '/settings',
+      name: 'Configurações',
+      Icon: Settings,
+    },
+    {
+      path: '/tipos',
+      name: 'Tipos de dados',
+      Icon: Database,
+    },
+    {
+      path: '/tables-configs',
+      name: 'Configurações de tabelas',
+      Icon: Table,
+    },
+  ];
 
   return (
     <div className='flex h-screen bg-gray-100'>
@@ -13,25 +31,17 @@ export default function Layout() {
           <Link to='/'>Migrare</Link>
         </div>
         <nav className='flex-1 p-4 space-y-2'>
-          <Link
-            to='/settings'
-            className={`flex items-center w-full p-2 rounded hover:bg-secondary ${
-              location.pathname === '/settings' ? 'bg-secondary' : ''
-            }`}
-          >
-            <Settings className='w-5 h-5 mr-2' />
-            Configurações
-          </Link>
-
-          <Link
-            to='/tipos'
-            className={`flex items-center w-full p-2 rounded hover:bg-secondary ${
-              location.pathname === '/tipos' ? 'bg-secondary' : ''
-            }`}
-          >
-            <Database className='w-5 h-5 mr-2' />
-            Tipos de Dados
-          </Link>
+          {menu.map(({ Icon, path, name }) => (
+            <Link
+              to={path}
+              className={`flex items-center text-left w-full p-2 rounded hover:bg-secondary ${
+                location.pathname === path ? 'bg-secondary' : ''
+              }`}
+            >
+              <Icon className='w-5 h-5 mr-2' />
+              {name}
+            </Link>
+          ))}
         </nav>
       </aside>
 
