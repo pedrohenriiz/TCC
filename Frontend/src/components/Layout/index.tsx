@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Settings, Database, Table } from 'lucide-react';
+import { Settings, Database, Table, DatabaseBackup } from 'lucide-react';
 import Header from '../Header';
 
 export default function Layout() {
@@ -20,6 +20,11 @@ export default function Layout() {
       path: '/tables-configs',
       name: 'Configurações de tabelas',
       Icon: Table,
+    },
+    {
+      path: '/migration-project',
+      name: 'Projetos de migração',
+      Icon: DatabaseBackup,
     },
   ];
 
