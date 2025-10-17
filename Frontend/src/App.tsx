@@ -28,7 +28,7 @@ function App() {
         <Route path='/tipos' element={<DataTypesPage />} />
         <Route path='/tables-config/:id' element={<TableConfigsShow />} />
         <Route path='/source-tables' element={<SourceTablesConfig />} />
-        <Route path='/migration-project' element={<ProjectsList />} />
+        <Route path='/migration-projects' element={<ProjectsList />} />
         <Route path='/migration-project/:id' element={<ProjectForm />} />
         <Route
           path='/migration-project/:id/source-tables'

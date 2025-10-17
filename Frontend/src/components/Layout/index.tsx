@@ -22,7 +22,7 @@ export default function Layout() {
       Icon: Table,
     },
     {
-      path: '/migration-project',
+      path: '/migration-projects',
       name: 'Projetos de migração',
       Icon: DatabaseBackup,
     },

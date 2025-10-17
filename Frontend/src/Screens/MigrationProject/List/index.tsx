@@ -99,11 +99,9 @@ export default function ProjectsList() {
           icon={<Trash2 className='w-6 h-6' />}
           warningMessage='⚠️ Esta ação irá excluir o projeto e todas as configurações associadas (tabelas de origem, mapeamentos, etc). Esta ação não pode ser desfeita.'
           details={
-            <div>
-              <p className='font-semibold text-gray-800'>
-                {projectToDelete?.name}
-              </p>
-            </div>
+            <p className='font-semibold text-gray-800'>
+              {projectToDelete?.name}
+            </p>
           }
         />
       )}
