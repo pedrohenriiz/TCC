@@ -6,3 +6,4 @@ services:
       - '8000:8000'
     volumes:
       - ./app:/app # Permite hot reload enquanto você desenvolve
+      - ./data:/app/data

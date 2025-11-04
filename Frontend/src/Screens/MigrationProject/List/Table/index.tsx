@@ -55,14 +55,14 @@ export default function Table({ handleView, handleDelete }) {
         <div className='flex items-center justify-center gap-2'>
           <button
             onClick={() => handleView(row)}
-            className='p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition'
+            className='p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition hover:cursor-pointer'
             title='Visualizar detalhes'
           >
             <Eye className='w-4 h-4' />
           </button>
           <button
             onClick={() => handleDelete(row)}
-            className='p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition'
+            className='p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition hover:cursor-pointer'
             title='Excluir tipo'
           >
             <Trash2 className='w-4 h-4' />

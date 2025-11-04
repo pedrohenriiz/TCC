@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import Textfield from '../../../../components/Inputs/Textfield';
 import Textarea from '../../../../components/Inputs/Textarea';
 import { useToastStore } from '../../../../store/useToastStore';
+import ConfirmButton from '../../../../components/ConfirmButton';
 
 const validationSchema = Yup.object({
   name: Yup.string()
@@ -83,43 +84,28 @@ export default function Form() {
           required
           formik={formik}
         />
-
-        <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-          <h3 className='font-semibold text-blue-900 mb-2'>
-            📝 Próximos Passos
-          </h3>
-          <p className='text-sm text-blue-800'>
-            Após criar o projeto, você poderá:
-          </p>
-          <ul className='mt-2 text-sm text-blue-800 space-y-1 list-disc list-inside'>
-            <li>Fazer upload de arquivos Excel com os dados de origem</li>
-            <li>Configurar manualmente as tabelas de origem</li>
-            <li>Definir o mapeamento entre origem e destino</li>
-            <li>Executar a migração dos dados</li>
-          </ul>
-        </div>
       </div>
 
-      <div className='flex items-center justify-between mt-8 pt-6 border-t'>
+      <div className='flex items-center justify-between mt-8 pt-6 '>
         <button
           type='button'
           onClick={() => navigate('/migration-projects')}
-          className='px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition'
+          className='px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition hover:cursor-pointer'
         >
           Cancelar
         </button>
-        <button
-          type='submit'
+        <ConfirmButton
+          Icon={<Save className='w-5 h-5' />}
+          iconPosition='left'
           disabled={formik.isSubmitting || !formik.isValid}
-          className='flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold transition disabled:bg-gray-400'
-        >
-          <Save className='w-5 h-5' />
-          {formik.isSubmitting
-            ? 'Salvando...'
-            : id === 'new'
-            ? 'Criar Projeto'
-            : 'Salvar Alterações'}
-        </button>
+          text={
+            formik.isSubmitting
+              ? 'Salvando...'
+              : id === 'new'
+              ? 'Criar Projeto'
+              : 'Salvar Alterações'
+          }
+        />
       </div>
     </form>
   );

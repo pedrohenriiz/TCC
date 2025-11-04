@@ -1,19 +1,72 @@
-// store/useSourceTablesStore.js
+// store/useSourceTablesStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const useSourceTablesStore = create(
+export interface SourceTable {
+  id: number;
+  projectId: number; // ✅ NOVO: Referência ao projeto
+  name: string;
+  source: 'excel' | 'manual';
+  fileName: string | null;
+  columns: any[];
+  rowCount: number;
+  data: any[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SourceTablesStore {
+  sourceTables: SourceTable[];
+  currentSourceTable: SourceTable | null;
+
+  addSourceTable: (
+    projectId: number,
+    table: Partial<SourceTable>
+  ) => SourceTable;
+  addSourceTableFromExcel: (
+    projectId: number,
+    fileName: string,
+    data: any[],
+    columns: any[],
+    rowCount: number
+  ) => SourceTable;
+  addManualSourceTable: (
+    projectId: number,
+    name: string,
+    columns: any[]
+  ) => SourceTable;
+  updateSourceTable: (id: number, updates: Partial<SourceTable>) => void;
+  deleteSourceTable: (id: number) => void;
+
+  getSourceTableById: (id: number) => SourceTable | undefined;
+  getSourceTablesByProject: (projectId: number) => SourceTable[]; // ✅ NOVO
+  setCurrentSourceTable: (table: SourceTable | null) => void;
+  clearCurrentSourceTable: () => void;
+  clearAllSourceTables: () => void;
+  searchSourceTables: (searchTerm: string, projectId?: number) => SourceTable[];
+  tableNameExists: (
+    name: string,
+    projectId: number,
+    excludeId?: number | null
+  ) => boolean;
+}
+
+const useSourceTablesStore = create<SourceTablesStore>()(
   persist(
     (set, get) => ({
-      // Estado inicial
       sourceTables: [],
       currentSourceTable: null,
 
-      // Adicionar tabela de origem
-      addSourceTable: (table) => {
-        const newTable = {
+      addSourceTable: (projectId, table) => {
+        const newTable: SourceTable = {
           id: Date.now(),
-          ...table,
+          projectId,
+          name: table.name || '',
+          source: table.source || 'manual',
+          fileName: table.fileName || null,
+          columns: table.columns || [],
+          rowCount: table.rowCount || 0,
+          data: table.data || null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -26,15 +79,22 @@ const useSourceTablesStore = create(
       },
 
       // Adicionar tabela de origem a partir do Excel
-      addSourceTableFromExcel: (fileName, data, columns, rowCount) => {
-        const newTable = {
+      addSourceTableFromExcel: (
+        projectId,
+        fileName,
+        data,
+        columns,
+        rowCount
+      ) => {
+        const newTable: SourceTable = {
           id: Date.now(),
-          name: fileName.replace(/\.[^/.]+$/, ''), // Remove extensão
+          projectId,
+          name: fileName.replace(/\.[^/.]+$/, ''),
           source: 'excel',
           fileName: fileName,
           columns: columns,
           rowCount: rowCount,
-          data: data, // Dados completos do Excel
+          data: data,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -46,10 +106,10 @@ const useSourceTablesStore = create(
         return newTable;
       },
 
-      // Adicionar tabela manual
-      addManualSourceTable: (name, columns) => {
-        const newTable = {
+      addManualSourceTable: (projectId, name, columns) => {
+        const newTable: SourceTable = {
           id: Date.now(),
+          projectId,
           name: name,
           source: 'manual',
           fileName: null,
@@ -67,7 +127,6 @@ const useSourceTablesStore = create(
         return newTable;
       },
 
-      // Atualizar tabela de origem
       updateSourceTable: (id, updates) => {
         set((state) => ({
           sourceTables: state.sourceTables.map((table) =>
@@ -82,7 +141,6 @@ const useSourceTablesStore = create(
         }));
       },
 
-      // Deletar tabela de origem
       deleteSourceTable: (id) => {
         set((state) => ({
           sourceTables: state.sourceTables.filter((table) => table.id !== id),
@@ -93,29 +151,35 @@ const useSourceTablesStore = create(
         }));
       },
 
-      // Buscar tabela por ID
       getSourceTableById: (id) => {
         return get().sourceTables.find((table) => table.id === id);
       },
 
-      // Definir tabela atual
+      getSourceTablesByProject: (projectId) => {
+        return get().sourceTables.filter(
+          (table) => table.projectId === projectId
+        );
+      },
+
       setCurrentSourceTable: (table) => {
         set({ currentSourceTable: table });
       },
 
-      // Limpar tabela atual
       clearCurrentSourceTable: () => {
         set({ currentSourceTable: null });
       },
 
-      // Limpar todas as tabelas
       clearAllSourceTables: () => {
         set({ sourceTables: [], currentSourceTable: null });
       },
 
-      // Buscar por nome
-      searchSourceTables: (searchTerm) => {
-        const tables = get().sourceTables;
+      searchSourceTables: (searchTerm, projectId) => {
+        let tables = get().sourceTables;
+
+        if (projectId) {
+          tables = tables.filter((table) => table.projectId === projectId);
+        }
+
         if (!searchTerm) return tables;
 
         return tables.filter((table) =>
@@ -123,10 +187,10 @@ const useSourceTablesStore = create(
         );
       },
 
-      // Verificar se existe tabela com mesmo nome
-      tableNameExists: (name, excludeId = null) => {
+      tableNameExists: (name, projectId, excludeId = null) => {
         return get().sourceTables.some(
           (table) =>
+            table.projectId === projectId &&
             table.name.toLowerCase() === name.toLowerCase() &&
             table.id !== excludeId
         );

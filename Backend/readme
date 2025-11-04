@@ -1,0 +1,17 @@
+Quando tiver que instalar uma nova biblioteca, é necessário rodar o comando
+
+docker compose build --no-cache
+
+Estrutura de pastas
+
+Domain / Entities -> Salva os models das tabelas
+
+Domain / Repositories -> Cria as funções que conectam ao banco de dados
+
+Infra / Controllers -> Camada que conecta na rota
+
+Infra / Database -> Coisas relacionadas ao banco de dados
+
+Interfaces / Schemas -> Interface dos dados de entrada
+
+Application -> Camada de serviços

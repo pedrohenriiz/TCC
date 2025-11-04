@@ -2,121 +2,89 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// ==========================================
-// TIPOS E INTERFACES
-// ==========================================
-
-export type TransformationType =
-  | 'uppercase'
-  | 'lowercase'
-  | 'trim'
-  | 'titlecase'
-  | 'format_phone'
-  | 'format_cpf'
-  | 'format_cnpj'
-  | 'format_date'
-  | 'static_value'
-  | 'concat'
-  | 'split'
-  | 'replace'
-  | 'substring';
-
-export interface Transformation {
-  type: TransformationType;
-  params?: Record<string, any>;
-}
-
 export interface ColumnMapping {
-  id: number;
-  sourceColumn: string;
-  targetColumn: string;
-  transformations: Transformation[];
-  isRequired: boolean;
-  defaultValue?: string | null;
-}
-
-export interface TableMapping {
-  id: number;
-  projectId: number;
+  id: string;
   sourceTableId: number;
   sourceTableName: string;
-  targetTableId: number;
-  targetTableName: string;
+  sourceColumnId: number;
+  sourceColumnName: string;
+  destTableId: number;
+  destTableName: string;
+  destColumnId: number;
+  destColumnName: string;
+}
+
+export interface Mapping {
+  id: number;
+  projectId: number;
+  name: string;
   columnMappings: ColumnMapping[];
-  executionOrder: number;
-  isActive: boolean;
+  status: 'complete' | 'incomplete';
   createdAt: string;
   updatedAt: string;
 }
 
 interface MappingStore {
-  mappings: TableMapping[];
-  currentMapping: TableMapping | null;
+  mappings: Mapping[];
 
-  // CRUD de mapeamentos
+  // CRUD Operations
   addMapping: (
-    mapping: Omit<TableMapping, 'id' | 'createdAt' | 'updatedAt'>
-  ) => TableMapping;
-  updateMapping: (id: number, updates: Partial<TableMapping>) => void;
+    projectId: number,
+    name: string,
+    columnMappings: ColumnMapping[]
+  ) => Mapping;
+
+  updateMapping: (id: number, updates: Partial<Mapping>) => void;
+
   deleteMapping: (id: number) => void;
-  getMappingById: (id: number) => TableMapping | undefined;
 
-  // Gerenciar mapeamento atual
-  setCurrentMapping: (mapping: TableMapping | null) => void;
-  clearCurrentMapping: () => void;
+  // Queries
+  getMappingById: (id: number) => Mapping | undefined;
 
-  // Gerenciar mapeamentos de colunas
-  addColumnMapping: (
-    mappingId: number,
-    columnMapping: Omit<ColumnMapping, 'id'>
-  ) => void;
-  updateColumnMapping: (
-    mappingId: number,
-    columnMappingId: number,
-    updates: Partial<ColumnMapping>
-  ) => void;
-  deleteColumnMapping: (mappingId: number, columnMappingId: number) => void;
+  getMappingsByProject: (projectId: number) => Mapping[];
 
-  // Transformações
-  addTransformation: (
-    mappingId: number,
-    columnMappingId: number,
-    transformation: Transformation
-  ) => void;
-  removeTransformation: (
-    mappingId: number,
-    columnMappingId: number,
-    transformationIndex: number
-  ) => void;
+  searchMappings: (searchTerm: string, projectId?: number) => Mapping[];
 
-  // Buscar mapeamentos por projeto
-  getMappingsByProject: (projectId: number) => TableMapping[];
+  // Validations
+  mappingNameExists: (
+    name: string,
+    projectId: number,
+    excludeId?: number | null
+  ) => boolean;
 
-  // Buscar mapeamento por tabelas
-  getMappingByTables: (
-    sourceTableId: number,
-    targetTableId: number
-  ) => TableMapping | undefined;
+  // Statistics
+  getMappingStats: (projectId: number) => {
+    total: number;
+    complete: number;
+    incomplete: number;
+  };
 
-  // Limpar tudo
+  // Utility
   clearAllMappings: () => void;
+  clearMappingsByProject: (projectId: number) => void;
 }
 
-// ==========================================
-// STORE
-// ==========================================
+const calculateMappingStatus = (
+  columnMappings: ColumnMapping[]
+): 'complete' | 'incomplete' => {
+  // Você pode adicionar lógica mais complexa aqui
+  // Por exemplo, verificar se todas as colunas obrigatórias foram mapeadas
+  return columnMappings.length > 0 ? 'complete' : 'incomplete';
+};
 
 const useMappingStore = create<MappingStore>()(
   persist(
     (set, get) => ({
       mappings: [],
-      currentMapping: null,
 
-      // Adicionar mapeamento
-      addMapping: (mapping) => {
-        const newMapping: TableMapping = {
-          ...mapping,
+      // Adicionar novo mapeamento
+      addMapping: (projectId, name, columnMappings) => {
+        const newMapping: Mapping = {
           id: Date.now(),
+          projectId,
+          name,
+          columnMappings,
+          status: calculateMappingStatus(columnMappings),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -128,18 +96,26 @@ const useMappingStore = create<MappingStore>()(
         return newMapping;
       },
 
-      // Atualizar mapeamento
+      // Atualizar mapeamento existente
       updateMapping: (id, updates) => {
         set((state) => ({
-          mappings: state.mappings.map((mapping) =>
-            mapping.id === id
-              ? {
-                  ...mapping,
-                  ...updates,
-                  updatedAt: new Date().toISOString(),
-                }
-              : mapping
-          ),
+          mappings: state.mappings.map((mapping) => {
+            if (mapping.id === id) {
+              const updated = {
+                ...mapping,
+                ...updates,
+                updatedAt: new Date().toISOString(),
+              };
+
+              // Recalcular status se os columnMappings foram atualizados
+              if (updates.columnMappings) {
+                updated.status = calculateMappingStatus(updates.columnMappings);
+              }
+
+              return updated;
+            }
+            return mapping;
+          }),
         }));
       },
 
@@ -147,156 +123,93 @@ const useMappingStore = create<MappingStore>()(
       deleteMapping: (id) => {
         set((state) => ({
           mappings: state.mappings.filter((mapping) => mapping.id !== id),
-          currentMapping:
-            state.currentMapping?.id === id ? null : state.currentMapping,
         }));
       },
 
-      // Buscar por ID
+      // Buscar mapeamento por ID
       getMappingById: (id) => {
         return get().mappings.find((mapping) => mapping.id === id);
       },
 
-      // Definir mapeamento atual
-      setCurrentMapping: (mapping) => {
-        set({ currentMapping: mapping });
-      },
-
-      // Limpar mapeamento atual
-      clearCurrentMapping: () => {
-        set({ currentMapping: null });
-      },
-
-      // Adicionar mapeamento de coluna
-      addColumnMapping: (mappingId, columnMapping) => {
-        const newColumnMapping: ColumnMapping = {
-          ...columnMapping,
-          id: Date.now() + Math.random(),
-        };
-
-        set((state) => ({
-          mappings: state.mappings.map((mapping) =>
-            mapping.id === mappingId
-              ? {
-                  ...mapping,
-                  columnMappings: [...mapping.columnMappings, newColumnMapping],
-                  updatedAt: new Date().toISOString(),
-                }
-              : mapping
-          ),
-        }));
-      },
-
-      // Atualizar mapeamento de coluna
-      updateColumnMapping: (mappingId, columnMappingId, updates) => {
-        set((state) => ({
-          mappings: state.mappings.map((mapping) =>
-            mapping.id === mappingId
-              ? {
-                  ...mapping,
-                  columnMappings: mapping.columnMappings.map((cm) =>
-                    cm.id === columnMappingId ? { ...cm, ...updates } : cm
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
-              : mapping
-          ),
-        }));
-      },
-
-      // Deletar mapeamento de coluna
-      deleteColumnMapping: (mappingId, columnMappingId) => {
-        set((state) => ({
-          mappings: state.mappings.map((mapping) =>
-            mapping.id === mappingId
-              ? {
-                  ...mapping,
-                  columnMappings: mapping.columnMappings.filter(
-                    (cm) => cm.id !== columnMappingId
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
-              : mapping
-          ),
-        }));
-      },
-
-      // Adicionar transformação
-      addTransformation: (mappingId, columnMappingId, transformation) => {
-        set((state) => ({
-          mappings: state.mappings.map((mapping) =>
-            mapping.id === mappingId
-              ? {
-                  ...mapping,
-                  columnMappings: mapping.columnMappings.map((cm) =>
-                    cm.id === columnMappingId
-                      ? {
-                          ...cm,
-                          transformations: [
-                            ...cm.transformations,
-                            transformation,
-                          ],
-                        }
-                      : cm
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
-              : mapping
-          ),
-        }));
-      },
-
-      // Remover transformação
-      removeTransformation: (
-        mappingId,
-        columnMappingId,
-        transformationIndex
-      ) => {
-        set((state) => ({
-          mappings: state.mappings.map((mapping) =>
-            mapping.id === mappingId
-              ? {
-                  ...mapping,
-                  columnMappings: mapping.columnMappings.map((cm) =>
-                    cm.id === columnMappingId
-                      ? {
-                          ...cm,
-                          transformations: cm.transformations.filter(
-                            (_, index) => index !== transformationIndex
-                          ),
-                        }
-                      : cm
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
-              : mapping
-          ),
-        }));
-      },
-
-      // Buscar por projeto
+      // Buscar mapeamentos por projeto
       getMappingsByProject: (projectId) => {
         return get().mappings.filter(
           (mapping) => mapping.projectId === projectId
         );
       },
 
-      // Buscar por tabelas
-      getMappingByTables: (sourceTableId, targetTableId) => {
-        return get().mappings.find(
+      // Buscar mapeamentos com termo de pesquisa
+      searchMappings: (searchTerm, projectId) => {
+        let mappings = get().mappings;
+
+        // Filtrar por projeto se fornecido
+        if (projectId) {
+          mappings = mappings.filter(
+            (mapping) => mapping.projectId === projectId
+          );
+        }
+
+        // Se não houver termo de pesquisa, retornar todos
+        if (!searchTerm) return mappings;
+
+        const term = searchTerm.toLowerCase();
+
+        return mappings.filter((mapping) => {
+          // Buscar no nome do mapeamento
+          if (mapping.name.toLowerCase().includes(term)) return true;
+
+          // Buscar nos nomes das tabelas e colunas
+          return mapping.columnMappings.some(
+            (cm) =>
+              cm.sourceTableName.toLowerCase().includes(term) ||
+              cm.sourceColumnName.toLowerCase().includes(term) ||
+              cm.destTableName.toLowerCase().includes(term) ||
+              cm.destColumnName.toLowerCase().includes(term)
+          );
+        });
+      },
+
+      // Verificar se nome já existe
+      mappingNameExists: (name, projectId, excludeId = null) => {
+        return get().mappings.some(
           (mapping) =>
-            mapping.sourceTableId === sourceTableId &&
-            mapping.targetTableId === targetTableId
+            mapping.projectId === projectId &&
+            mapping.name.toLowerCase() === name.toLowerCase() &&
+            mapping.id !== excludeId
         );
       },
 
-      // Limpar tudo
+      // Estatísticas dos mapeamentos
+      getMappingStats: (projectId) => {
+        const projectMappings = get().mappings.filter(
+          (m) => m.projectId === projectId
+        );
+
+        return {
+          total: projectMappings.length,
+          complete: projectMappings.filter((m) => m.status === 'complete')
+            .length,
+          incomplete: projectMappings.filter((m) => m.status === 'incomplete')
+            .length,
+        };
+      },
+
+      // Limpar todos os mapeamentos
       clearAllMappings: () => {
-        set({ mappings: [], currentMapping: null });
+        set({ mappings: [] });
+      },
+
+      // Limpar mapeamentos de um projeto específico
+      clearMappingsByProject: (projectId) => {
+        set((state) => ({
+          mappings: state.mappings.filter(
+            (mapping) => mapping.projectId !== projectId
+          ),
+        }));
       },
     }),
     {
-      name: 'mapping-storage',
+      name: 'mappings-storage',
       partialize: (state) => ({
         mappings: state.mappings,
       }),

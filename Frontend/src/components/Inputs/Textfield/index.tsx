@@ -1,3 +1,5 @@
+import HelperText from '../HelperText';
+
 interface FormInputProps {
   label: string;
   name: string;
@@ -40,9 +42,7 @@ export default function Textfield({
           {formik.errors[name]}
         </p>
       )}
-      {helpText && (
-        <p className='mt-1 text-sm text-gray-500 text-left'>{helpText}</p>
-      )}
+      {helpText && <HelperText text={helpText} />}
     </div>
   );
 }
