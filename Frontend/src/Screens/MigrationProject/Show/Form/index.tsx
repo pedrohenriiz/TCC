@@ -9,6 +9,10 @@ import Textfield from '../../../../components/Inputs/Textfield';
 import Textarea from '../../../../components/Inputs/Textarea';
 import { useToastStore } from '../../../../store/useToastStore';
 import ConfirmButton from '../../../../components/ConfirmButton';
+import { useMigrationProjectCreate } from '../../../../hooks/MigrationProjects/useMigrationProjectCreate';
+import { useMigrationProjectUpdate } from '../../../../hooks/MigrationProjects/useMigrationProjectUpdate';
+import { useQuery } from '@tanstack/react-query';
+import { getUniqueMigrationProject } from '../../../../services/migrationProjects/getUniqueMigrationProject';
 
 const validationSchema = Yup.object({
   name: Yup.string()
@@ -27,25 +31,37 @@ export default function Form() {
   const { addProject, updateProject, getProjectById } =
     useMigrationProjectStore();
   const { success } = useToastStore();
+  const create = useMigrationProjectCreate();
+  const update = useMigrationProjectUpdate();
+
+  const { data } = useQuery({
+    queryKey: ['migrationProject', id],
+    queryFn: () => getUniqueMigrationProject(Number(id)),
+    enabled: id !== 'new',
+  });
 
   const formik = useFormik({
     initialValues: {
-      name: '',
-      description: '',
+      name: data?.name || '',
+      description: data?.description || '',
     },
     validationSchema,
-    onSubmit: (values, { setSubmitting }) => {
+    enableReinitialize: true,
+    onSubmit: async (values) => {
+      const formattedData = {
+        name: values.name,
+        description: values.description,
+      };
       if (id === 'new') {
-        const newProject = addProject(values);
-        success('Projeto de migração criado com sucesso!');
-        navigate(`/migration-project/${newProject.id}/source-tables`);
+        create.mutate(formattedData);
       } else {
-        updateProject(parseInt(id!), values);
-        success('Projeto atualizado com sucesso!');
-        navigate(`/migration-project/${id}`);
-      }
+        console.log(formattedData);
 
-      setSubmitting(false);
+        await update.mutateAsync({
+          id: Number(id),
+          data: formattedData,
+        });
+      }
     },
   });
 

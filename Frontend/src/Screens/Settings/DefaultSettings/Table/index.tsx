@@ -1,9 +1,8 @@
 import { Eye, Trash2, Edit, Key, AlertCircle } from 'lucide-react';
 import DataTable from '../../../../components/DataTable';
+import TableButton from '../../../../components/TableButton';
 
 export default function Table({ columns, handleEditRow, deleteRow }) {
-  console.log(columns);
-
   // Configuração de cores por tipo de dado
   const dataTypeConfig = {
     INT: { color: 'bg-blue-100 text-blue-700' },
@@ -109,28 +108,26 @@ export default function Table({ columns, handleEditRow, deleteRow }) {
       width: '150px',
       render: (_, row) => (
         <div className='flex items-center justify-center gap-2'>
-          <button
+          <TableButton
+            variant='view'
+            Icon={<Eye className='w-4 h-4' />}
             onClick={() => handleView(row)}
-            className='p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition'
             title='Visualizar detalhes'
-          >
-            <Eye className='w-4 h-4' />
-          </button>
-          <button
+          />
+
+          <TableButton
+            variant='edit'
+            Icon={<Edit className='w-4 h-4' />}
             onClick={() => handleEdit(row)}
-            className='p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition'
-            title='Editar coluna'
-          >
-            <Edit className='w-4 h-4' />
-          </button>
-          <button
+            title='Editar detalhes'
+          />
+
+          <TableButton
+            variant='delete'
+            Icon={<Trash2 className='w-4 h-4' />}
             onClick={() => handleDelete(row)}
-            className='p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition'
             title='Excluir coluna'
-            disabled={row.is_primary_key}
-          >
-            <Trash2 className='w-4 h-4' />
-          </button>
+          />
         </div>
       ),
     },

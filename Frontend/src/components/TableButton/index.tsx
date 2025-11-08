@@ -14,7 +14,6 @@ interface TableButtonProps
     HTMLButtonElement
   > {
   Icon: React.ReactNode;
-  text: string;
   variant: ButtonVariant;
 }
 export default function TableButton({

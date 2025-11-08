@@ -19,7 +19,5 @@ interface TableConfigData {
 export const createTableConfigs = async (requestData: TableConfigData) => {
   const { data } = await api.post('/table-configs', requestData);
 
-  console.log('estou aqui', data);
-
   return data;
 };

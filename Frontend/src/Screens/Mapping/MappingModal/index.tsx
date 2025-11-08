@@ -147,7 +147,6 @@ const MappingModal = ({ isOpen, onClose }) => {
     alert(
       `Mapeamento "${mappingName}" salvo com sucesso!\n${mappings.length} mapeamento(s) configurado(s).`
     );
-    console.log('Salvando:', { mappingName, mappings });
   };
 
   const handleClose = () => {

@@ -7,24 +7,14 @@ export default function Layout() {
 
   const menu = [
     {
-      path: '/settings',
-      name: 'Configurações',
-      Icon: Settings,
-    },
-    {
-      path: '/tipos',
-      name: 'Tipos de dados',
-      Icon: Database,
+      path: '/migration-projects',
+      name: 'Projetos de migração',
+      Icon: DatabaseBackup,
     },
     {
       path: '/tables-configs',
       name: 'Configurações de tabelas',
       Icon: Table,
-    },
-    {
-      path: '/migration-projects',
-      name: 'Projetos de migração',
-      Icon: DatabaseBackup,
     },
   ];
 

@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, f
 from sqlalchemy.orm import relationship
 from infra.database.connection import Base
 
-
 class TableConfigs(Base):
     __tablename__ = "table_configs"
 

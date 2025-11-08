@@ -1,77 +1,43 @@
 import { Eye, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TableButton from '../../../../components/TableButton';
+import TableButton from '../../../../../components/TableButton';
 
 interface TableColumnProps {
-  onOpenDeleteModal: (row: { id: number }) => void;
+  onOpenDeleteModal: (row: { id: number; name: string }) => void;
 }
 
 export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
   const navigate = useNavigate();
 
   const handleView = (row: { id: number }) => {
-    navigate(`/tables-config/${row.id}`);
+    navigate(`/migration-project/${row.id}`);
   };
 
   const columns = [
     {
-      key: 'name',
-      header: 'Nome da Tabela',
+      name: 'name',
+      header: 'Nome',
       accessor: (row: { name: string }) => row.name,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: string) => (
-        <span className='font-mono font-semibold text-gray-800'>{value}</span>
-      ),
     },
     {
-      key: 'exhibition_name',
-      header: 'Nome de Exibição',
-      accessor: (row: { exhibition_name: string }) => row.exhibition_name,
+      name: 'description',
+      header: 'Descrição',
+      accessor: (row: { description: string }) => row.description,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: string) => <span className='text-gray-700'>{value}</span>,
     },
     {
-      key: 'total_columns',
-      header: 'Colunas',
-      accessor: (row: { total_columns: number }) => row.total_columns,
-      sortable: true,
-      searchable: false,
-      headerAlign: 'text-center',
-      cellAlign: 'text-center',
-      render: (value: number) => (
-        <span className='bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium'>
-          {value || 0}
-        </span>
-      ),
-    },
-    {
-      key: 'total_foreign_keys',
-      header: 'Relacionamentos',
-      accessor: (row: { total_foreign_keys: number }) => row.total_foreign_keys,
-      sortable: true,
-      searchable: false,
-      headerAlign: 'text-center',
-      cellAlign: 'text-center',
-      render: (value: number) => {
-        return (
-          <span className='bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium'>
-            {value} FK
-          </span>
-        );
-      },
-    },
-    {
-      key: 'created_at',
+      name: 'created_at',
       header: 'Criado em',
       accessor: (row: { created_at: Date }) => row.created_at,
       sortable: true,
-      searchable: false,
+      searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
       render: (value: Date) => {
@@ -89,7 +55,29 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
       },
     },
     {
-      key: 'actions',
+      name: 'updated_at',
+      header: 'Atualizado em',
+      accessor: (row: { updated_at: Date }) => row.updated_at,
+      sortable: true,
+      searchable: true,
+      headerAlign: 'text-left',
+      cellAlign: 'text-left',
+      render: (value: Date) => {
+        if (!value) return '-';
+        const date = new Date(value);
+        return (
+          <span className='text-sm text-gray-600'>
+            {date.toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            })}
+          </span>
+        );
+      },
+    },
+    {
+      name: 'actions',
       header: 'Ações',
       accessor: () => null,
       sortable: false,
@@ -97,7 +85,7 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
       headerAlign: 'text-center',
       cellAlign: 'text-center',
       width: '150px',
-      render: (_: any, row: { id: number }) => (
+      render: (_: any, row: { id: number; name: string }) => (
         <div className='flex items-center justify-center gap-2'>
           <TableButton
             Icon={<Eye className='w-4 h-4' />}
@@ -108,9 +96,9 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
 
           <TableButton
             Icon={<Trash2 className='w-4 h-4' />}
-            title='Excluir detalhes'
-            variant='delete'
             onClick={() => onOpenDeleteModal(row)}
+            title='Excluir tipo'
+            variant='delete'
           />
         </div>
       ),
