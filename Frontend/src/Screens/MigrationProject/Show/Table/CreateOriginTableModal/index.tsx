@@ -9,11 +9,13 @@ import Textfield from '../../../../../components/Inputs/Textfield';
 import { useToastStore } from '../../../../../store/useToastStore';
 import LargeModal from '../../../../../components/LargeModal';
 import ConfirmButton from '../../../../../components/ConfirmButton';
+import { useMigrationProjectOriginTableCreate } from '../../../../../hooks/MigrationProjectsOriginTables/useMigrationProjectOriginTableCreate';
+import { useMigrationProjectOriginTableUpdate } from '../../../../../hooks/MigrationProjectsOriginTables/useMigrationProjectOriginTableUpdate';
 
 interface TableModalProps {
   isOpen: boolean;
   onClose: () => void;
-  projectId: number;
+  projectId: string;
   table?: SourceTable | null; // Se passar table, é EDIÇÃO, se não passar é CRIAÇÃO
 }
 
@@ -27,14 +29,18 @@ export default function TableModal({
   isOpen,
   onClose,
   projectId,
+  onParentHandleFormSubmit,
   table = null,
 }: TableModalProps) {
   const isEditMode = !!table;
 
-  const [columns, setColumns] = useState<Column[]>([
-    { id: '1', name: '', type: 'text' },
-  ]);
-  const [primaryKeyColumn, setPrimaryKeyColumn] = useState<string>('');
+  const create = useMigrationProjectOriginTableCreate();
+  const update = useMigrationProjectOriginTableUpdate();
+
+  // const [columns, setColumns] = useState<Column[]>([
+  //   { id: '1', name: '', type: 'text' },
+  // ]);
+  // const [primaryKeyColumn, setPrimaryKeyColumn] = useState<string>('');
 
   const {
     addManualSourceTable,
@@ -73,12 +79,25 @@ export default function TableModal({
 
   const formik = useFormik({
     initialValues: {
+      id: table?.id || '',
       name: table?.name || '',
+      columns: table
+        ? table.columns.map((col) => ({
+            id: col.id,
+            name: col.name || col.columnName,
+            type: col.type || col.columnType,
+          }))
+        : [{ id: '1', name: '', type: 'text' }],
+      primaryKey: table
+        ? table.columns.find((c) => c.isPrimaryKey || c.is_pk)?.id || ''
+        : '',
     },
     validationSchema,
     enableReinitialize: true,
     onSubmit: (values, { setSubmitting }) => {
-      // Validar colunas
+      const { columns, primaryKey } = values;
+
+      // 1. Validar colunas vazias
       const hasEmptyColumns = columns.some((col) => !col.name.trim());
       if (hasEmptyColumns) {
         alert('Todos os nomes de colunas são obrigatórios');
@@ -86,7 +105,7 @@ export default function TableModal({
         return;
       }
 
-      // Validar nomes duplicados
+      // 2. Validar nomes duplicados
       const columnNames = columns.map((col) => col.name.trim().toLowerCase());
       const hasDuplicates = columnNames.length !== new Set(columnNames).size;
       if (hasDuplicates) {
@@ -95,96 +114,80 @@ export default function TableModal({
         return;
       }
 
-      // Validar primary key
-      if (!primaryKeyColumn) {
+      // 3. Validar a Primary Key
+      if (!primaryKey) {
         alert('Selecione uma coluna como Primary Key');
         setSubmitting(false);
         return;
       }
 
-      // Preparar colunas
-      const formattedColumns = columns.map((col, index) => ({
+      // 4. Preparar colunas formatadas para o backend
+      const formattedColumns = columns.map((col) => ({
         id: col.id,
         name: col.name.trim(),
         type: col.type,
-        originalIndex: index,
-        isPrimaryKey: col.id === primaryKeyColumn,
+        is_pk: col.id === primaryKey,
       }));
 
+      // 5. MODO DE EDIÇÃO
       if (isEditMode && table) {
-        // EDITAR tabela existente
+        update.mutate({
+          id: Number(values.id),
+          migrationProjectId: Number(projectId),
+          requestData: {
+            id: Number(values.id),
+            name: values.name.trim(),
+            columns: formattedColumns,
+          },
+        });
+
         updateSourceTable(table.id, {
           name: values.name.trim(),
           columns: formattedColumns,
         });
-        success('Tabela atualizada com sucesso!');
-      } else {
-        // CRIAR nova tabela
-        addManualSourceTable(projectId, values.name.trim(), formattedColumns);
-        success('Tabela criada com sucesso!');
+      }
+      // 6. MODO DE CRIAÇÃO
+      else {
+        if (projectId === 'new') {
+          onParentHandleFormSubmit();
+        } else {
+          create.mutate({
+            migrationProjectId: Number(projectId),
+            requestData: {
+              name: values.name.trim(),
+              columns: formattedColumns,
+            },
+          });
+        }
       }
 
+      // 7. Finalizar
       setSubmitting(false);
       handleClose();
     },
   });
 
-  // Carregar dados da tabela quando for modo de edição
-  useEffect(() => {
-    if (isEditMode && table && isOpen) {
-      const loadedColumns = table.columns.map((col) => ({
-        id: col.id,
-        name: col.name,
-        type: col.type as 'text' | 'number' | 'date' | 'boolean',
-      }));
-      setColumns(loadedColumns);
-
-      const pkColumn = table.columns.find((col) => col.isPrimaryKey);
-      setPrimaryKeyColumn(pkColumn?.id || '');
-    } else if (!isEditMode && isOpen) {
-      // Modo criação - resetar tudo
-      setColumns([{ id: '1', name: '', type: 'text' }]);
-      setPrimaryKeyColumn('');
-    }
-  }, [isEditMode, table, isOpen]);
-
   const handleAddColumn = () => {
-    const maxId =
-      columns.length > 0
-        ? Math.max(
-            ...columns.map((c) => {
-              const numId = parseInt(c.id.replace('col_', ''));
-              return isNaN(numId) ? parseInt(c.id) : numId;
-            })
-          )
-        : 0;
-    const newId = `col_${maxId + 1}`;
-    setColumns([...columns, { id: newId, name: '', type: 'text' }]);
+    const newId = `col_${formik.values.columns.length + 1}`;
+    formik.setFieldValue('columns', [
+      ...formik.values.columns,
+      { id: newId, name: '', type: 'text' },
+    ]);
   };
 
-  const handleRemoveColumn = (id: string) => {
-    if (columns.length === 1) {
-      alert('A tabela deve ter pelo menos uma coluna');
-      return;
+  const handleRemoveColumn = (id) => {
+    const newColumns = formik.values.columns.filter((c) => c.id !== id);
+
+    // Se pk removida → limpa PK
+    if (formik.values.primaryKey === id) {
+      formik.setFieldValue('primaryKey', '');
     }
-    setColumns(columns.filter((col) => col.id !== id));
-    if (primaryKeyColumn === id) {
-      setPrimaryKeyColumn('');
-    }
-  };
 
-  const handleColumnNameChange = (id: string, name: string) => {
-    setColumns(columns.map((col) => (col.id === id ? { ...col, name } : col)));
-  };
-
-  const handleColumnTypeChange = (id: string, type: Column['type']) => {
-    setColumns(columns.map((col) => (col.id === id ? { ...col, type } : col)));
+    formik.setFieldValue('columns', newColumns);
   };
 
   const handleClose = () => {
     formik.resetForm();
-    setColumns([{ id: '1', name: '', type: 'text' }]);
-    setPrimaryKeyColumn('');
     onClose();
   };
 
@@ -248,11 +251,11 @@ export default function TableModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {columns.map((column) => (
+                  {formik.values.columns.map((column) => (
                     <tr
                       key={column.id}
                       className={`border-b border-gray-100 ${
-                        primaryKeyColumn === column.id
+                        formik.values.primaryKey === column.id
                           ? 'bg-green-50'
                           : 'hover:bg-gray-50'
                       }`}
@@ -262,9 +265,14 @@ export default function TableModal({
                         <input
                           type='text'
                           value={column.name}
-                          onChange={(e) =>
-                            handleColumnNameChange(column.id, e.target.value)
-                          }
+                          onChange={(e) => {
+                            const newColumns = [...formik.values.columns];
+                            const index = newColumns.findIndex(
+                              (c) => c.id === column.id
+                            );
+                            newColumns[index].name = e.target.value;
+                            formik.setFieldValue('columns', newColumns);
+                          }}
                           placeholder='Ex: id, nome, email'
                           className='w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         />
@@ -274,12 +282,14 @@ export default function TableModal({
                       <td className='px-4 py-3'>
                         <select
                           value={column.type}
-                          onChange={(e) =>
-                            handleColumnTypeChange(
-                              column.id,
-                              e.target.value as Column['type']
-                            )
-                          }
+                          onChange={(e) => {
+                            const newColumns = [...formik.values.columns];
+                            const index = newColumns.findIndex(
+                              (c) => c.id === column.id
+                            );
+                            newColumns[index].type = e.target.value;
+                            formik.setFieldValue('columns', newColumns);
+                          }}
                           className='w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         >
                           <option value='text'>Texto</option>
@@ -294,8 +304,10 @@ export default function TableModal({
                         <input
                           type='radio'
                           name='primaryKey'
-                          checked={primaryKeyColumn === column.id}
-                          onChange={() => setPrimaryKeyColumn(column.id)}
+                          checked={formik.values.primaryKey === column.id}
+                          onChange={() =>
+                            formik.setFieldValue('primaryKey', column.id)
+                          }
                           className='w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer'
                           title='Definir como Primary Key'
                         />

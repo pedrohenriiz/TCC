@@ -7,25 +7,45 @@ import TableModal from './CreateOriginTableModal'; // Nome atualizado
 import ConfirmButton from '../../../../components/ConfirmButton';
 import EmptyTable from './EmptyTable';
 import TableButton from '../../../../components/TableButton';
+import ConfirmModal from '../../../../components/ConfirmModal';
+import { useMigrationProjectOriginTableDelete } from '../../../../hooks/MigrationProjectsOriginTables/useMigrationProjectOriginTableDelete';
 
-export default function Table() {
+export default function Table({ onParentHandleFormSubmit }) {
   const { id } = useParams() as { id: string };
 
-  const { getSourceTablesByProject, deleteSourceTable } =
-    useSourceTablesStore();
+  const deleteMutation = useMigrationProjectOriginTableDelete();
+
+  const { getSourceTablesByProject } = useSourceTablesStore();
 
   // ✅ Estados corretos
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingRow, setDeletingRow] = useState<{
+    id: number;
+  } | null>(null);
   const [editTable, setEditTable] = useState<any>(null);
 
-  const sourceTables = getSourceTablesByProject(Number(id));
+  const sourceTables = getSourceTablesByProject();
 
-  const handleDelete = (table: any) => {
-    if (
-      window.confirm(`Tem certeza que deseja excluir a tabela "${table.name}"?`)
-    ) {
-      deleteSourceTable(table.id);
+  const handleCloseModal = () => {
+    setDeletingRow(null);
+    setShowDeleteModal(false);
+  };
+
+  const handleConfirmToDeleteRow = () => {
+    if (deletingRow) {
+      deleteMutation.mutate({
+        id: deletingRow.id,
+        migrationProjectId: Number(id),
+      });
     }
+
+    handleCloseModal();
+  };
+
+  const handleOpenDeleteModal = (table: any) => {
+    setDeletingRow({ id: table.id });
+    setShowDeleteModal(true);
   };
 
   const columns = [
@@ -83,8 +103,8 @@ export default function Table() {
           <TableButton
             variant='delete'
             Icon={<Trash2 className='w-4 h-4' />}
-            text='Excluir  tabela'
-            onClick={() => handleDelete(row)}
+            text='Excluir tabela'
+            onClick={() => handleOpenDeleteModal(row)}
           />
         </div>
       ),
@@ -130,8 +150,26 @@ export default function Table() {
             setEditTable(null);
             setShowCreateModal(false);
           }}
+          onParentHandleFormSubmit={onParentHandleFormSubmit}
           projectId={Number(id)}
           table={editTable}
+        />
+      )}
+
+      {showDeleteModal && (
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleConfirmToDeleteRow}
+          title='Confirmar Exclusão'
+          message='Tem certeza que deseja excluir a tabela de origem?'
+          confirmText='Excluir'
+          variant='danger'
+          icon={<Trash2 className='w-6 h-6' />}
+          warningMessage='⚠️ Esta ação irá excluir a tabela de origem e todas as configurações associadas (colunas mapeadas). Esta ação não pode ser desfeita.'
+          details={
+            <p className='font-semibold text-gray-800'>{deletingRow?.name}</p>
+          }
         />
       )}
     </div>

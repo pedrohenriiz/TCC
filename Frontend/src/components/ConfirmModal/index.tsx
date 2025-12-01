@@ -85,7 +85,7 @@ export default function ConfirmModal({
       <div className='flex gap-3 mt-6'>
         <button
           onClick={onClose}
-          className='flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 font-medium transition'
+          className='flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 hover:cursor-pointer hover:disabled:cursor-not-allowed font-medium transition'
         >
           {cancelText}
         </button>
@@ -94,7 +94,7 @@ export default function ConfirmModal({
             onConfirm();
             onClose();
           }}
-          className={`flex-1 text-white px-4 py-3 rounded-lg font-medium transition ${config.confirmButton}`}
+          className={`flex-1 text-white px-4 py-3 rounded-lg font-medium transition ${config.confirmButton} hover:cursor-pointer hover:disabled:cursor-not-allowed`}
         >
           {confirmText}
         </button>

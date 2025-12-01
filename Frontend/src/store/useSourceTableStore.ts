@@ -4,7 +4,6 @@ import { persist } from 'zustand/middleware';
 
 export interface SourceTable {
   id: number;
-  projectId: number; // ✅ NOVO: Referência ao projeto
   name: string;
   source: 'excel' | 'manual';
   fileName: string | null;
@@ -30,16 +29,12 @@ interface SourceTablesStore {
     columns: any[],
     rowCount: number
   ) => SourceTable;
-  addManualSourceTable: (
-    projectId: number,
-    name: string,
-    columns: any[]
-  ) => SourceTable;
+  addManualSourceTable: (name: string, columns: any[]) => SourceTable;
   updateSourceTable: (id: number, updates: Partial<SourceTable>) => void;
   deleteSourceTable: (id: number) => void;
 
   getSourceTableById: (id: number) => SourceTable | undefined;
-  getSourceTablesByProject: (projectId: number) => SourceTable[]; // ✅ NOVO
+  getSourceTablesByProject: () => SourceTable[];
   setCurrentSourceTable: (table: SourceTable | null) => void;
   clearCurrentSourceTable: () => void;
   clearAllSourceTables: () => void;
@@ -59,14 +54,10 @@ const useSourceTablesStore = create<SourceTablesStore>()(
 
       addSourceTable: (projectId, table) => {
         const newTable: SourceTable = {
-          id: Date.now(),
-          projectId,
+          id: table.id,
           name: table.name || '',
-          source: table.source || 'manual',
-          fileName: table.fileName || null,
           columns: table.columns || [],
-          rowCount: table.rowCount || 0,
-          data: table.data || null,
+          migration_project_id: projectId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -106,16 +97,10 @@ const useSourceTablesStore = create<SourceTablesStore>()(
         return newTable;
       },
 
-      addManualSourceTable: (projectId, name, columns) => {
+      addManualSourceTable: (name, columns) => {
         const newTable: SourceTable = {
-          id: Date.now(),
-          projectId,
           name: name,
-          source: 'manual',
-          fileName: null,
           columns: columns,
-          rowCount: 0,
-          data: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -155,14 +140,16 @@ const useSourceTablesStore = create<SourceTablesStore>()(
         return get().sourceTables.find((table) => table.id === id);
       },
 
-      getSourceTablesByProject: (projectId) => {
-        return get().sourceTables.filter(
-          (table) => table.projectId === projectId
-        );
+      getSourceTablesByProject: () => {
+        return get().sourceTables;
       },
 
       setCurrentSourceTable: (table) => {
         set({ currentSourceTable: table });
+      },
+
+      setSourceTableList: (table) => {
+        set({ sourceTables: table });
       },
 
       clearCurrentSourceTable: () => {

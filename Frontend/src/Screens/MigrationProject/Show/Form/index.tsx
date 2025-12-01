@@ -1,81 +1,12 @@
-// components/Form.tsx
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
-import useMigrationProjectStore from '../../../../store/useMigrationProjectStore';
 import { Save } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useEffect } from 'react';
 import Textfield from '../../../../components/Inputs/Textfield';
 import Textarea from '../../../../components/Inputs/Textarea';
-import { useToastStore } from '../../../../store/useToastStore';
 import ConfirmButton from '../../../../components/ConfirmButton';
-import { useMigrationProjectCreate } from '../../../../hooks/MigrationProjects/useMigrationProjectCreate';
-import { useMigrationProjectUpdate } from '../../../../hooks/MigrationProjects/useMigrationProjectUpdate';
-import { useQuery } from '@tanstack/react-query';
-import { getUniqueMigrationProject } from '../../../../services/migrationProjects/getUniqueMigrationProject';
 
-const validationSchema = Yup.object({
-  name: Yup.string()
-    .trim()
-    .min(3, 'Nome deve ter no mínimo 3 caracteres')
-    .required('Nome do projeto é obrigatório'),
-  description: Yup.string()
-    .trim()
-    .min(10, 'Descrição deve ter no mínimo 10 caracteres')
-    .required('Descrição é obrigatória'),
-});
-
-export default function Form() {
+export default function Form({ formik }) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addProject, updateProject, getProjectById } =
-    useMigrationProjectStore();
-  const { success } = useToastStore();
-  const create = useMigrationProjectCreate();
-  const update = useMigrationProjectUpdate();
-
-  const { data } = useQuery({
-    queryKey: ['migrationProject', id],
-    queryFn: () => getUniqueMigrationProject(Number(id)),
-    enabled: id !== 'new',
-  });
-
-  const formik = useFormik({
-    initialValues: {
-      name: data?.name || '',
-      description: data?.description || '',
-    },
-    validationSchema,
-    enableReinitialize: true,
-    onSubmit: async (values) => {
-      const formattedData = {
-        name: values.name,
-        description: values.description,
-      };
-      if (id === 'new') {
-        create.mutate(formattedData);
-      } else {
-        console.log(formattedData);
-
-        await update.mutateAsync({
-          id: Number(id),
-          data: formattedData,
-        });
-      }
-    },
-  });
-
-  useEffect(() => {
-    if (id && id !== 'new') {
-      const project = getProjectById(parseInt(id));
-      if (project) {
-        formik.setValues({
-          name: project.name,
-          description: project.description,
-        });
-      }
-    }
-  }, [id]);
 
   return (
     <form

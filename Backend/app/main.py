@@ -5,6 +5,8 @@ from infra.controllers.sql_controller import sql_router
 from infra.controllers.migrate_controller import teste
 from infra.controllers.table_config_controller import router
 from infra.controllers.migration_project_controller import migration_project_router
+from infra.controllers.migration_project_origin_table_controller import migration_project_origin_table_router
+from infra.controllers.transformation_controller import transformation_router
 from infra.database.connection import Base, engine
 
 Base.metadata.create_all(bind=engine)
@@ -21,3 +23,5 @@ app.include_router(sql_router)
 app.include_router(teste)
 app.include_router(router)
 app.include_router(migration_project_router)
+app.include_router(migration_project_origin_table_router)
+app.include_router(transformation_router)

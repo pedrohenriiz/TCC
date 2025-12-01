@@ -70,7 +70,7 @@ export default function TableConfigsShow() {
     };
   };
 
-  const initialValues = useMemo(() => mapApiToFormik(data?.data), [data?.data]);
+  const initialValues = useMemo(() => mapApiToFormik(data), [data?.data]);
 
   return (
     <div className='min-h-screen bg-gray-50 p-6'>
@@ -78,7 +78,6 @@ export default function TableConfigsShow() {
         <div className='bg-white rounded-lg shadow-lg p-6 mb-6'>
           <Header />
 
-          {/* Formulário de Tabela */}
           <div className='border-2 border-dashed border-gray-300 rounded-lg p-6'>
             <Formik
               initialValues={initialValues}
