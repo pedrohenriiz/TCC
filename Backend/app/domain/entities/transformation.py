@@ -21,6 +21,11 @@ class TransformationType(Base):
         lazy="joined"
     )
 
+    transformations = relationship(
+        "MappingTransformation",
+        back_populates="transformation_type"
+    )
+
 class TransformationSchemaDefinition(Base):
     __tablename__ = "transformation_schema_definition"
 
@@ -40,6 +45,11 @@ class TransformationSchemaDefinition(Base):
         "TransformationType",
         back_populates="schema_definitions",
         cascade="all"
+    )
+
+    param_values = relationship(
+        "MappingTransformationParamValue",
+        back_populates="param_definition"
     )
 
 

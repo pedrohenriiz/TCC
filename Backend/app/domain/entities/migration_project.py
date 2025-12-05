@@ -49,6 +49,12 @@ class MigrationProjectOriginTable(Base):
         cascade="all, delete-orphan"
     )
 
+    mapping_columns = relationship(
+        "MappingColumn",
+        back_populates="origin_table",
+        foreign_keys="[MappingColumn.origin_table_id]"
+    )
+
 
 class MigrationProjectOriginTableColumn(Base):
     __tablename__ = "migration_project_origin_table_columns"
@@ -69,4 +75,10 @@ class MigrationProjectOriginTableColumn(Base):
     origin_table = relationship(
         "MigrationProjectOriginTable",
         back_populates="columns"
+    )
+
+    mapping_columns = relationship(
+        "MappingColumn",
+        back_populates="origin_column",
+        foreign_keys="[MappingColumn.origin_column_id]"
     )

@@ -21,6 +21,12 @@ class TableConfigs(Base):
         foreign_keys="[TableConfigColumns.table_id]"
     )
 
+    mapping_columns = relationship(
+        "MappingColumn",
+        back_populates="destiny_table",
+        foreign_keys="[MappingColumn.destiny_table_id]"
+    )
+
 
 class TableConfigColumns(Base):
     __tablename__ = "table_config_columns"
@@ -51,3 +57,9 @@ class TableConfigColumns(Base):
 
     foreign_table = relationship("TableConfigs", foreign_keys=[foreign_table_id])
     foreign_column = relationship("TableConfigColumns", remote_side=[id])
+
+    mapping_columns = relationship(
+        "MappingColumn",
+        back_populates="destiny_column",
+        foreign_keys="[MappingColumn.destiny_column_id]"
+    )

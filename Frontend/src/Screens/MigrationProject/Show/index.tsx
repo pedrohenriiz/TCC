@@ -10,7 +10,7 @@ import useSourceTablesStore from '../../../store/useSourceTableStore';
 import { useFormik } from 'formik';
 import { useQuery } from '@tanstack/react-query';
 import { getUniqueMigrationProject } from '../../../services/migrationProjects/getUniqueMigrationProject';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMigrationProjectCreate } from '../../../hooks/MigrationProjects/useMigrationProjectCreate';
 import { useMigrationProjectUpdate } from '../../../hooks/MigrationProjects/useMigrationProjectUpdate';
 import useMigrationProjectStore from '../../../store/useMigrationProjectStore';
@@ -33,6 +33,7 @@ export default function ProjectForm() {
   const update = useMigrationProjectUpdate();
   const { addProject, updateProject, getProjectById } =
     useMigrationProjectStore();
+  const navigate = useNavigate();
 
   const { sourceTables, setSourceTableList } = useSourceTablesStore();
 
@@ -153,7 +154,7 @@ export default function ProjectForm() {
                 <ConfirmButton
                   Icon={<Settings className='w-4 h-4' />}
                   iconPosition='left'
-                  // onClick={() => setShowCreateModal(true)}
+                  onClick={() => navigate(`/migration-project/${id}/mapping`)}
                   text='Configurar'
                 />
               </div>
