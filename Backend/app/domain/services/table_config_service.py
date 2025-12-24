@@ -9,8 +9,8 @@ class TableConfigService:
     def create_table(self, data: TableConfigCreate):
         return self.repo.create(data)
     
-    def list_tables(self):
-        return self.repo.list_tables()
+    def list_tables(self, with_columns: bool = False):
+        return self.repo.list_tables(with_columns)
     
     def delete_tables(self, table_id: int) -> bool:
         return self.repo.delete_tables(table_id)

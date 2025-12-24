@@ -8,7 +8,7 @@ export default function Header() {
 
   return (
     <div className='flex items-center justify-between mb-6'>
-      <PageHeader title='Configuração do Banco de Dados' />
+      <PageHeader title='Configuração das tabelas' />
 
       <ConfirmButton
         iconPosition='left'

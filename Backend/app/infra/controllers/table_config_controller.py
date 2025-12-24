@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from infra.database.database import database
 from domain.services.table_config_service import TableConfigService
@@ -16,9 +16,9 @@ def create_table_config(request: TableConfigCreate, db: Session = Depends(databa
     return config
 
 @router.get("/")
-def list_table_config(db: Session = Depends(database)):
+def list_table_config(db: Session = Depends(database), with_columns: bool = Query(False, description="Informa se retorna os dados das colunas")):
     service = TableConfigService(db)
-    data = service.list_tables()
+    data = service.list_tables(with_columns)
     return data
 
 @router.get("/{id}")
@@ -33,6 +33,9 @@ def show_table_config(id:int, db: Session= Depends(database)):
 
 @router.patch("/{id}")
 def update_table_config(id: int, request: TableConfigUpdate, db: Session=Depends(database)):
+    print("Esse é o request")
+    print(request)
+
     service = TableConfigService(db)
     data = service.update_table(id, request)
 

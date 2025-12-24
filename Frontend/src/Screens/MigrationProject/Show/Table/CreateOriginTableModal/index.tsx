@@ -42,12 +42,8 @@ export default function TableModal({
   // ]);
   // const [primaryKeyColumn, setPrimaryKeyColumn] = useState<string>('');
 
-  const {
-    addManualSourceTable,
-    updateSourceTable,
-    tableNameExists,
-    sourceTables,
-  } = useSourceTablesStore();
+  const { updateSourceTable, tableNameExists, sourceTables } =
+    useSourceTablesStore();
   const { success } = useToastStore();
 
   const validationSchema = Yup.object({

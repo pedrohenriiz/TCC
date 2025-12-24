@@ -7,8 +7,6 @@ export async function deleteMigrationProjectOriginTable({
   migrationProjectId: number;
   id: number;
 }) {
-  console.log(migrationProjectId, id);
-
   await api.delete(
     `/migration-projects/${migrationProjectId}/origin-tables/${id}`
   );

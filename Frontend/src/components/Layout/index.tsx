@@ -1,6 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Settings, Database, Table, DatabaseBackup } from 'lucide-react';
-import Header from '../Header';
+import { Table, DatabaseBackup, Cog } from 'lucide-react';
 
 export default function Layout() {
   const location = useLocation();
@@ -15,6 +14,11 @@ export default function Layout() {
       path: '/tables-configs',
       name: 'Configurações de tabelas',
       Icon: Table,
+    },
+    {
+      path: '/settings',
+      name: 'Configurações',
+      Icon: Cog,
     },
   ];
 
@@ -42,7 +46,7 @@ export default function Layout() {
 
       {/* Área principal */}
       <div className='flex-1 flex flex-col'>
-        <Header />
+        <div className='py-6 bg-white'></div>
         {/* Conteúdo da rota */}
         <main className='flex-1 p-6 overflow-auto'>
           <Outlet />

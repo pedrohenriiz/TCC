@@ -7,10 +7,19 @@ class Mapping(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(80), nullable=False)
+    status = Column(String(10), nullable=False, default="INCOMPLETE")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Chave estrangeira para o projeto
+    migration_project_id = Column(Integer, ForeignKey("migration_projects.id", ondelete="CASCADE"), nullable=False)
+
+    migration_project = relationship(
+        "MigrationProject",
+        back_populates="mappings"
+    )
 
     columns = relationship(
         "MappingColumn",

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import DefaultColumnsTab from './DefaultSettings';
 import PageHeader from '../../components/pageHeader';
+import PagetTitle from '../../components/PageTitle';
 
 export default function SettingsPage() {
   const tabs = ['Colunas padrão'];
@@ -10,6 +11,8 @@ export default function SettingsPage() {
     <div className='min-h-screen '>
       <div className=' mx-auto bg-white shadow rounded-xl'>
         <div className='p-6'>
+          <PagetTitle title='Migrare - Configurações' />
+
           <PageHeader title='Configurações' />
         </div>
 

@@ -11,8 +11,6 @@ export function useMigrationProjectOriginTableUpdate() {
   return useMutation({
     mutationFn: updateMigrationProjectOriginTable,
     onSuccess: (data, variables) => {
-      console.log(data);
-
       updateSourceTable(table.id, {
         name: values.name.trim(),
         columns: formattedColumns,

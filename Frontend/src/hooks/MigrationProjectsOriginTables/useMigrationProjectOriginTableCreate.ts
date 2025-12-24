@@ -11,8 +11,6 @@ export function useMigrationProjectOriginTableCreate() {
   return useMutation({
     mutationFn: createMigrationProjectOriginTable,
     onSuccess: (data, variables) => {
-      console.log('data', data);
-      console.log(variables);
       addSourceTable(variables.migrationProjectId, data);
       success('Tabela de origem criada com sucesso!');
     },

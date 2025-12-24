@@ -6,6 +6,7 @@ import tableColumns from './TableColumns';
 import Header from './Header';
 import DeleteTableConfigModal from './DeleteTableConfigModal';
 import { useTableConfigDelete } from '../../../hooks/TableConfigs/useTableConfigDelete';
+import PagetTitle from '../../../components/PageTitle';
 
 export default function TableConfigsList() {
   const deleteMutation = useTableConfigDelete();
@@ -39,6 +40,7 @@ export default function TableConfigsList() {
   return (
     <>
       <div className='mx-auto'>
+        <PagetTitle title='Migrare - Configuração das Tabelas' />
         <Header />
 
         <div className='bg-white rounded-lg shadow-lg overflow-hidden'>

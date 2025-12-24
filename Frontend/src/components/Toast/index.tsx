@@ -71,7 +71,7 @@ export function Toast({ toast }: ToastProps) {
       </p>
       <button
         onClick={handleClose}
-        className={`${config.iconColor} hover:opacity-70 transition flex-shrink-0`}
+        className={`${config.iconColor} hover:opacity-70 hover:cursor-pointer transition flex-shrink-0`}
       >
         <X className='w-4 h-4' />
       </button>

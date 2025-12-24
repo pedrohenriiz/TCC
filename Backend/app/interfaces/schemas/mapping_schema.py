@@ -1,10 +1,17 @@
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel
+from enum import Enum
+
+class StatusEnum(str, Enum):
+    COMPLETE = "COMPLETE"
+    INCOMPLETE = "INCOMPLETE"
 
 class MappingBase(BaseModel):
     name: str
     created_at: Optional[datetime] = None
+    status: StatusEnum
+    migration_project_id: int
 
 # Mapping Columns
 
@@ -31,6 +38,10 @@ class MappingCreate(MappingBase):
 class MappingUpdate(MappingBase):
     id: Optional[int] = None
     name: Optional[str] = None
+    status: Optional[StatusEnum] = None
+
+    columns: Optional[List[MappingColumnsBase]] = None
+    
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None

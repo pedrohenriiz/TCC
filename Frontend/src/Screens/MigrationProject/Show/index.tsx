@@ -1,11 +1,9 @@
 import * as Yup from 'yup';
 
-import Header from './Header';
 import Form from './Form';
 import Table from './Table';
 import { CheckCircle2, Settings } from 'lucide-react';
 import ConfirmButton from '../../../components/ConfirmButton';
-import { useEffect } from 'react';
 import useSourceTablesStore from '../../../store/useSourceTableStore';
 import { useFormik } from 'formik';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +11,9 @@ import { getUniqueMigrationProject } from '../../../services/migrationProjects/g
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMigrationProjectCreate } from '../../../hooks/MigrationProjects/useMigrationProjectCreate';
 import { useMigrationProjectUpdate } from '../../../hooks/MigrationProjects/useMigrationProjectUpdate';
-import useMigrationProjectStore from '../../../store/useMigrationProjectStore';
+import PagetTitle from '../../../components/PageTitle';
+import CustomHeader from '../../../components/CustomHeader';
+import useSetOriginTables from './hooks/useSetOriginTables';
 
 const validationSchema = Yup.object({
   name: Yup.string()
@@ -28,14 +28,11 @@ const validationSchema = Yup.object({
 
 export default function ProjectForm() {
   const { id } = useParams<{ id: string }>();
-  const { clearAllSourceTables } = useSourceTablesStore();
   const create = useMigrationProjectCreate();
   const update = useMigrationProjectUpdate();
-  const { addProject, updateProject, getProjectById } =
-    useMigrationProjectStore();
   const navigate = useNavigate();
 
-  const { sourceTables, setSourceTableList } = useSourceTablesStore();
+  const { sourceTables } = useSourceTablesStore();
 
   const { data } = useQuery({
     queryKey: ['migrationProject', id],
@@ -54,13 +51,14 @@ export default function ProjectForm() {
       const formattedData = {
         name: values.name,
         description: values.description,
+        origin_tables: [],
       };
-      console.log('Awudewa');
 
       if (id === 'new') {
         if (sourceTables) {
           formattedData.origin_tables = sourceTables;
         }
+        create.mutate(formattedData);
       } else {
         await update.mutateAsync({
           id: Number(id),
@@ -70,37 +68,27 @@ export default function ProjectForm() {
     },
   });
 
-  useEffect(() => {
-    if (id && id !== 'new') {
-      const project = getProjectById(parseInt(id));
-      if (project) {
-        formik.setValues({
-          name: project.name,
-          description: project.description,
-        });
-      }
-
-      if (data?.origin_tables) {
-        setSourceTableList(data.origin_tables);
-      }
-    }
-  }, [id, data]);
+  useSetOriginTables({
+    data,
+    id,
+  });
 
   const parentHandleFormSubmit = () => {
     formik.handleSubmit();
   };
 
-  useEffect(() => {
-    return () => {
-      clearAllSourceTables();
-    };
-  }, []);
-
   return (
-    <div className='min-h-screen '>
-      <div className=' mx-auto'>
-        <Header />
+    <div className='min-h-screen bg-gray-50'>
+      <PagetTitle title='Migrare - Projetos de Migração' />
 
+      <CustomHeader
+        title={id === 'new' ? 'Novo Projeto de Migração' : 'Editar Projeto'}
+        handleGoBack={() => navigate('/migration-projects')}
+        showBackButton
+        subtitle='Configure o projeto de migração'
+      />
+
+      <div className='max-w-6xl mx-auto'>
         <Form formik={formik} />
 
         {/* Card de Próximos Passos */}

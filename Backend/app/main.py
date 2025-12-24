@@ -10,6 +10,10 @@ from infra.controllers.transformation_controller import transformation_router
 from infra.controllers.mapping_controller import mapping_router
 from infra.database.connection import Base, engine
 
+import logging
+
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()

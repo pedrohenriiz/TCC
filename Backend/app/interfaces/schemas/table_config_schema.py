@@ -34,10 +34,6 @@ class TableConfigResponse(BaseModel):
     name: str
     exhibition_name: str
 
-class TableConfigUpdate(BaseModel):
-    name: Optional[str] = None
-    exhibition_name: Optional[str] = None
-
 class TableConfigList(BaseModel):
     id: int
     name: str
@@ -47,3 +43,16 @@ class TableConfigList(BaseModel):
 
 class TableConfigDelete(BaseModel):
     id: int
+
+class AddForeignKeyRequest(BaseModel):
+    foreign_table_id: int
+    foreign_column_id: int
+
+class AddForeignKeyResponse(BaseModel):
+    column_id: int
+    column_name: str
+    foreign_table_id: int
+    foreign_table_name: str
+    foreign_column_id: int
+    foreign_column_name: str
+    message: str

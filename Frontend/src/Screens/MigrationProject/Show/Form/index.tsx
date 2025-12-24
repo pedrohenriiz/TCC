@@ -11,7 +11,7 @@ export default function Form({ formik }) {
   return (
     <form
       onSubmit={formik.handleSubmit}
-      className='bg-white rounded-lg shadow-lg p-6'
+      className='bg-white rounded-lg shadow-lg p-6 mt-6'
     >
       <div className='space-y-6'>
         <Textfield

@@ -22,6 +22,12 @@ class MigrationProject(Base):
         cascade="all, delete-orphan"
     )
 
+    mappings = relationship(
+        "Mapping",
+        back_populates="migration_project",
+        cascade="all, delete-orphan"
+    )
+
 
 class MigrationProjectOriginTable(Base):
     __tablename__ = "migration_project_origin_tables"

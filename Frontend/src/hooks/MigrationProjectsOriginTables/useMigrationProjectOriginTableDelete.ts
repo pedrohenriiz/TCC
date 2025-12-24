@@ -10,7 +10,6 @@ export function useMigrationProjectOriginTableDelete() {
   return useMutation({
     mutationFn: deleteMigrationProjectOriginTable,
     onSuccess: (_, variables) => {
-      console.log(variables);
       success('Tabela de origem excluída com sucesso!');
 
       deleteSourceTable(variables.id);

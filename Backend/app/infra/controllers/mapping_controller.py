@@ -7,19 +7,21 @@ from interfaces.schemas.mapping_schema import (
     MappingUpdate
 )
 
-mapping_router = APIRouter(prefix="/mappings", tags=["Mappings"])
+mapping_router = APIRouter(prefix="/migration-project/{migration_project_id}/mappings", tags=["Mappings"])
 
 @mapping_router.post("/")
 def create_mapping(request: MappingCreate, db: Session=Depends(database)):
     service = MappingService(db)
+    print("request", request)
     mapping = service.create_mapping(request)
 
     return mapping
 
 @mapping_router.get("/")
-def list_mapping(db: Session = Depends(database)):
+def list_mapping(migration_project_id:int, db: Session = Depends(database)):
+    print("Esse cara aqui", migration_project_id)
     service = MappingService(db)
-    data = service.list_mapping()
+    data = service.list_mapping(migration_project_id)
 
     return data
 

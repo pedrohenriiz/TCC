@@ -104,7 +104,9 @@ export default function Table({ onParentHandleFormSubmit }) {
             variant='delete'
             Icon={<Trash2 className='w-4 h-4' />}
             text='Excluir tabela'
-            onClick={() => handleOpenDeleteModal(row)}
+            onClick={() => {
+              handleOpenDeleteModal(row);
+            }}
           />
         </div>
       ),

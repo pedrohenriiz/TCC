@@ -18,8 +18,9 @@ export default function Textfield({
   helpText,
   required = false,
   formik,
+  ...rest
 }: FormInputProps) {
-  const hasError = formik.touched[name] && formik.errors[name];
+  const hasError = formik?.touched[name] && formik?.errors[name];
 
   return (
     <div>
@@ -29,9 +30,9 @@ export default function Textfield({
       <input
         type={type}
         name={name}
-        value={formik.values[name]}
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
+        value={formik?.values[name]}
+        onChange={formik?.handleChange}
+        onBlur={formik?.handleBlur}
         placeholder={placeholder}
         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
           hasError ? 'border-red-500' : 'border-gray-300'
@@ -39,7 +40,7 @@ export default function Textfield({
       />
       {hasError && (
         <p className='mt-1 text-sm text-red-600 text-left'>
-          {formik.errors[name]}
+          {formik?.errors[name]}
         </p>
       )}
       {helpText && <HelperText text={helpText} />}

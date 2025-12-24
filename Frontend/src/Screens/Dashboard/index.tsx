@@ -1,38 +1,19 @@
-import { useNavigate } from 'react-router-dom';
+import PagetTitle from '../../components/PageTitle';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-
-  const navigateToUploadCSV = () => {
-    navigate('/upload-csv');
-  };
-
   return (
     <div className='min-h-screen flex flex-col'>
-      {/* Main */}
-      <main className='flex-1 flex items-center justify-center px-6'>
-        <div className='max-w-2xl w-full bg-white shadow-lg rounded-2xl p-8 text-center'>
-          <h2 className='text-2xl font-semibold text-gray-800 mb-2'>
-            Transforme seus CSVs em SQL
-          </h2>
-          <p className='text-gray-500 mb-6'>
-            Faça upload de seus arquivos CSV, mapeie as colunas e gere
-            automaticamente scripts SQL prontos para usar.
-          </p>
+      <PagetTitle title='Migrare - Dashboard' />
 
-          <div className='flex justify-center gap-4'>
-            <button
-              onClick={navigateToUploadCSV}
-              className='flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition hover:cursor-pointer'
-            >
-              Enviar CSV
-            </button>
-          </div>
+      <main className='flex-1 flex items-center justify-center px-6'>
+        <div className='max-w-2xl w-full bg-white shadow-lg rounded-2xl text-center'>
+          <h2 className='text-2xl font-semibold text-gray-800 '>
+            Bem-vindo ao <span className='font-bold'>Migrare</span>
+          </h2>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className='bg-gray-100 text-gray-500 text-sm text-center py-3'>
+      <footer className='bg-gray-100 text-gray-500 text-sm text-center '>
         Desenvolvido por Pedro Henrique
       </footer>
     </div>

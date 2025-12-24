@@ -1,64 +1,34 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from infra.database.database import database
 from pydantic import BaseModel
 from typing import List
-from domain.data_reader import DataReader
-from domain.transformers.data_transformer import DataTransformer
+from application.check_migration_project_and_origin_tables import ProjectFileService
+from domain.services.mapping_service import MappingService
 
 teste = APIRouter(prefix="", tags=["CSV"])
 
-class SplitParams(BaseModel):
-    delimiter: str
-    position: int
-
-class Transformation(BaseModel):
-    column: str
-    transform_type: str
-    params: SplitParams
-    new_column: str
-
 class MigrateRequest(BaseModel):
-    project_name: str
-    tables: List[str]
-    transformations: List[Transformation]
+    migration_project_id: str
+
 
 @teste.post("/migrate")
-async def migrate(request: MigrateRequest):
-    try:
-        reader = DataReader()
-        dataframes = reader.read_project_tables(request.project_name, request.tables)
+async def migrate(request: MigrateRequest, db: Session = Depends(database)):
 
-        dataframes_serializable = {
-            table_name: df.to_dict(orient="records")
-            for table_name, df in dataframes.items()
-        }
+    service = MappingService(db)
+    mapping = service.get_by_migration_project(request.migration_project_id)
 
-        df_transformed = {}
+    return mapping
+    # service = ProjectFileService("/app/projects")
+    # try:
+    #     # csv = service.get_csv_by_names(request.nome_projeto, request.nome_csv)
 
-        transformations = [
-            {
-                "column": "Nome",
-                "transform_type": "split",
-                "params": { "delimiter": " ", "position": 1},
-                "new_column": "sobrenome"
-            }
-        ]
-
-        transformer = DataTransformer()
-
-
-        for table_name, df in dataframes.items():
-            df_transformed[table_name] = transformer.apply_transformations(df, transformations)
-
-        # dataframes_serializable = {
-        #     table_name: df.to_dict(orient="records")
-        #     for table_name, df in df_transformed.items()
-        # }
-
-        print(dataframes)
-
-        return {
-            "message": "Arquivos lidos com sucesso!",
-            "tables": {table_name: df.to_dict(orient="records") for table_name, df in df_transformed.items()}
-        }  
-    except Exception as error:
-        raise HTTPException(status_code = 500, detail=str(error))
+    #     print(csv)
+    #     if not csv:
+    #         raise HTTPException(
+    #             status_code=404,
+    #             detail="CSV não encontrado!"
+    #         )
+    #     return csv  
+    # except Exception as error:
+    #     raise HTTPException(status_code = 500, detail=str(error))

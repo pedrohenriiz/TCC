@@ -12,7 +12,6 @@ type DataSettingsState = {
   dataSettings: DataSetting[];
   addDataSetting: (setting: Omit<DataSetting, 'id'>) => void;
   updateDataSetting: (id: string, data: Partial<DataSetting>) => void;
-  removeDataSetting: (id: string) => void;
   reset: () => void;
 };
 
@@ -34,11 +33,6 @@ export const useDataSettingsStore = create<DataSettingsState>()(
           dataSettings: state.dataSettings.map((s) =>
             s.id === id ? { ...s, ...data } : s
           ),
-        })),
-
-      removeDataSetting: (id) =>
-        set((state) => ({
-          dataSettings: state.dataSettings.filter((s) => s.id !== id),
         })),
 
       reset: () => set({ dataSettings: [] }),
