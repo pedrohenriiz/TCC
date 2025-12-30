@@ -37,6 +37,7 @@ export default function Textfield({
         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
           hasError ? 'border-red-500' : 'border-gray-300'
         }`}
+        {...rest}
       />
       {hasError && (
         <p className='mt-1 text-sm text-red-600 text-left'>

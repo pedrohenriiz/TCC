@@ -36,6 +36,7 @@ export default function Layout() {
               className={`flex items-center text-left w-full p-2 rounded hover:bg-secondary ${
                 location.pathname === path ? 'bg-secondary' : ''
               }`}
+              key={path}
             >
               <Icon className='w-5 h-5 mr-2' />
               {name}

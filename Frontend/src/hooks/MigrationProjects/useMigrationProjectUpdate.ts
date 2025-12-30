@@ -12,7 +12,7 @@ export function useMigrationProjectUpdate() {
     onSuccess: (updatedMigrationProject) => {
       queryClient.setQueryData(
         ['migrationProject', String(updatedMigrationProject.id)],
-        { data: updatedMigrationProject }
+        updatedMigrationProject
       );
 
       success('Projeto de migração atualizado com sucesso!');

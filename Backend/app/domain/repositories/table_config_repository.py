@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.sql import exists
 from sqlalchemy import func
 from domain.entities.table_config import TableConfigs, TableConfigColumns
 from interfaces.schemas.table_config_schema import TableConfigCreate
+from domain.entities.mapping import MappingColumn
 from domain.entities.table_config import TableConfigColumns
 
 class TableConfigRepository:
@@ -91,7 +93,7 @@ class TableConfigRepository:
         update_data = data.dict(exclude_unset=True)
 
         for key, value in update_data.items():
-            if key == "columns" and value is not None:
+            if key == "columns" and len(value) > 0 and value is not None:
                 # Garante que col_data é dict
                 new_columns_data = [
                     col if isinstance(col, dict) else col.dict(exclude_unset=True)
@@ -121,13 +123,16 @@ class TableConfigRepository:
                 # CUIDADO: Só remove se não houver mapping_columns associados
                 for col_name, col in existing_columns.items():
                     if col_name not in new_column_names:
-                        # Verifica se tem mapeamentos
-                        has_mappings = self.db.query(self.db.query(col.mapping_columns).exists()).scalar()
-                        
+
+                        has_mappings = self.db.query(
+                            exists().where(MappingColumn.destiny_column_id == col.id)
+                        ).scalar()
+
                         if not has_mappings:
-                            table.columns.remove(col)
+                            self.db.delete(col)
                         else:
                             print(f"⚠️ Não é possível remover coluna '{col_name}' - existem mapeamentos associados")
+
             else:
                 setattr(table, key, value)
         

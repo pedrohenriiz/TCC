@@ -2,27 +2,31 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+interface SourceTableColumnProps {
+  id: number;
+  name: string;
+  type: string;
+  is_pk: boolean;
+  origin_table_id: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface SourceTable {
   id: number;
   name: string;
-  source: 'excel' | 'manual';
-  fileName: string | null;
-  columns: any[];
-  rowCount: number;
-  data: any[] | null;
-  createdAt: string;
-  updatedAt: string;
+  migration_project_id: number;
+  columns: SourceTableColumnProps[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface SourceTablesStore {
   sourceTables: SourceTable[];
   currentSourceTable: SourceTable | null;
 
-  addSourceTable: (
-    projectId: number,
-    table: Partial<SourceTable>
-  ) => SourceTable;
-  updateSourceTable: (id: number, updates: Partial<SourceTable>) => void;
+  addSourceTable: (projectId: number, table: SourceTable) => SourceTable;
+  updateSourceTable: (id: number, updates: SourceTable) => void;
   deleteSourceTable: (id: number) => void;
 
   getSourceTablesByProject: () => SourceTable[];
@@ -47,23 +51,8 @@ const useSourceTablesStore = create<SourceTablesStore>()(
           name: table.name || '',
           columns: table.columns || [],
           migration_project_id: projectId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        set((state) => ({
-          sourceTables: [...state.sourceTables, newTable],
-        }));
-
-        return newTable;
-      },
-
-      addManualSourceTable: (name, columns) => {
-        const newTable: SourceTable = {
-          name: name,
-          columns: columns,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
 
         set((state) => ({
@@ -112,7 +101,7 @@ const useSourceTablesStore = create<SourceTablesStore>()(
       tableNameExists: (name, projectId, excludeId = null) => {
         return get().sourceTables.some(
           (table) =>
-            table.projectId === projectId &&
+            table.id === projectId &&
             table.name.toLowerCase() === name.toLowerCase() &&
             table.id !== excludeId
         );

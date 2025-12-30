@@ -107,7 +107,10 @@ class MigrationProjectOriginTableRepository:
                 col.is_pk = col_data.is_pk
         
     def delete(self, migration_project_id: int, id: int):
-        migration_project_origin_table = self.db.query(MigrationProjectOriginTable).filter(MigrationProject.id == migration_project_id and MigrationProjectOriginTable.id == id).first()
+        print("migration_project_id", migration_project_id)
+        print("id", id)
+
+        migration_project_origin_table = self.db.query(MigrationProjectOriginTable).filter(MigrationProjectOriginTable.migration_project_id == migration_project_id and MigrationProjectOriginTable.id == id).first()
         
         if not migration_project_origin_table:
             return False

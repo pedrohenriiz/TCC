@@ -85,7 +85,7 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
       headerAlign: 'text-center',
       cellAlign: 'text-center',
       width: '150px',
-      render: (_: any, row: { id: number; name: string }) => (
+      render: (_: null, row: { id: number; name: string }) => (
         <div className='flex items-center justify-center gap-2'>
           <TableButton
             Icon={<Eye className='w-4 h-4' />}

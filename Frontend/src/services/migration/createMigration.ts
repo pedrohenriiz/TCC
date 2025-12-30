@@ -5,5 +5,9 @@ interface MigrationData {
 }
 
 export const createMigration = async (requestData: MigrationData) => {
-  await api.post(`/migrate`, requestData);
+  await api.post(`/migrate`, {
+    ...requestData,
+    allow_duplicates: true,
+    duplicate_strategy: 'all',
+  });
 };

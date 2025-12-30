@@ -3,13 +3,15 @@ import useSourceTablesStore, {
   type SourceTable,
 } from '../../../../store/useSourceTableStore';
 
+interface UseSetOriginTablesProps {
+  id: string | undefined;
+  data: { origin_tables: SourceTable[] };
+}
+
 export default function useSetOriginTables({
   id,
   data,
-}: {
-  id: string | undefined;
-  data: { origin_tables: SourceTable[] };
-}) {
+}: UseSetOriginTablesProps) {
   const { setSourceTableList, clearAllSourceTables } = useSourceTablesStore();
 
   useEffect(() => {
@@ -20,5 +22,5 @@ export default function useSetOriginTables({
     return () => {
       clearAllSourceTables();
     };
-  }, [clearAllSourceTables, data?.origin_tables, id, setSourceTableList]);
+  }, [data?.origin_tables, id, clearAllSourceTables, setSourceTableList]);
 }

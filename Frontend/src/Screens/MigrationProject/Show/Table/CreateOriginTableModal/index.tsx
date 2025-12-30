@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -14,37 +13,29 @@ import { useMigrationProjectOriginTableUpdate } from '../../../../../hooks/Migra
 
 interface TableModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  projectId: string;
+  projectId: number | string;
   table?: SourceTable | null; // Se passar table, é EDIÇÃO, se não passar é CRIAÇÃO
-}
-
-interface Column {
-  id: string;
-  name: string;
-  type: 'text' | 'number' | 'date' | 'boolean';
+  onClose: () => void;
+  onParentHandleFormSubmit: () => void;
 }
 
 export default function TableModal({
-  isOpen,
-  onClose,
   projectId,
-  onParentHandleFormSubmit,
   table = null,
+  onClose,
+  onParentHandleFormSubmit,
 }: TableModalProps) {
+  const { error } = useToastStore();
+
   const isEditMode = !!table;
 
   const create = useMigrationProjectOriginTableCreate();
   const update = useMigrationProjectOriginTableUpdate();
 
-  // const [columns, setColumns] = useState<Column[]>([
-  //   { id: '1', name: '', type: 'text' },
-  // ]);
-  // const [primaryKeyColumn, setPrimaryKeyColumn] = useState<string>('');
-
   const { updateSourceTable, tableNameExists, sourceTables } =
     useSourceTablesStore();
-  const { success } = useToastStore();
+
+  console.log(sourceTables);
 
   const validationSchema = Yup.object({
     name: Yup.string()
@@ -59,8 +50,11 @@ export default function TableModal({
 
           if (isEditMode && table) {
             // No modo edição, verificar outras tabelas exceto a atual
+            // TODO: Testar esse filter
             const otherTables = sourceTables.filter(
-              (t) => t.projectId === projectId && t.id !== table.id
+              (t) =>
+                t.migration_project_id === Number(projectId) &&
+                t.id !== table.id
             );
             return !otherTables.some(
               (t) => t.name.toLowerCase() === value.trim().toLowerCase()
@@ -68,7 +62,7 @@ export default function TableModal({
           }
 
           // No modo criação, verificar todas as tabelas
-          return !tableNameExists(value.trim(), projectId);
+          return !tableNameExists(value.trim(), Number(projectId));
         }
       ),
   });
@@ -77,55 +71,50 @@ export default function TableModal({
     initialValues: {
       id: table?.id || '',
       name: table?.name || '',
+      migration_project_id: table?.migration_project_id || '',
       columns: table
         ? table.columns.map((col) => ({
             id: col.id,
-            name: col.name || col.columnName,
-            type: col.type || col.columnType,
+            name: col.name,
+            type: col.type,
           }))
-        : [{ id: '1', name: '', type: 'text' }],
-      primaryKey: table
-        ? table.columns.find((c) => c.isPrimaryKey || c.is_pk)?.id || ''
-        : '',
+        : [{ id: 1, name: '', type: 'text' }],
+      is_pk: table ? table.columns.find((c) => c.is_pk)?.id || '' : '',
     },
     validationSchema,
     enableReinitialize: true,
     onSubmit: (values, { setSubmitting }) => {
-      const { columns, primaryKey } = values;
+      const { columns, is_pk } = values;
 
-      // 1. Validar colunas vazias
       const hasEmptyColumns = columns.some((col) => !col.name.trim());
       if (hasEmptyColumns) {
-        alert('Todos os nomes de colunas são obrigatórios');
+        error('Todos os nomes de colunas são obrigatórios');
         setSubmitting(false);
         return;
       }
 
-      // 2. Validar nomes duplicados
       const columnNames = columns.map((col) => col.name.trim().toLowerCase());
       const hasDuplicates = columnNames.length !== new Set(columnNames).size;
       if (hasDuplicates) {
-        alert('Não pode haver colunas com nomes duplicados');
+        error('Não pode haver colunas com nomes duplicados');
         setSubmitting(false);
         return;
       }
 
-      // 3. Validar a Primary Key
-      if (!primaryKey) {
-        alert('Selecione uma coluna como Primary Key');
+      if (!is_pk) {
+        error('Selecione uma coluna como Primary Key');
         setSubmitting(false);
         return;
       }
 
-      // 4. Preparar colunas formatadas para o backend
       const formattedColumns = columns.map((col) => ({
         id: col.id,
         name: col.name.trim(),
         type: col.type,
-        is_pk: col.id === primaryKey,
+        is_pk: col.id === is_pk,
+        origin_table_id: table?.id as number,
       }));
 
-      // 5. MODO DE EDIÇÃO
       if (isEditMode && table) {
         update.mutate({
           id: Number(values.id),
@@ -138,12 +127,12 @@ export default function TableModal({
         });
 
         updateSourceTable(table.id, {
+          id: Number(values.id),
+          migration_project_id: Number(values.migration_project_id),
           name: values.name.trim(),
           columns: formattedColumns,
         });
-      }
-      // 6. MODO DE CRIAÇÃO
-      else {
+      } else {
         if (projectId === 'new') {
           onParentHandleFormSubmit();
         } else {
@@ -157,7 +146,6 @@ export default function TableModal({
         }
       }
 
-      // 7. Finalizar
       setSubmitting(false);
       handleClose();
     },
@@ -171,11 +159,10 @@ export default function TableModal({
     ]);
   };
 
-  const handleRemoveColumn = (id) => {
+  const handleRemoveColumn = (id: number) => {
     const newColumns = formik.values.columns.filter((c) => c.id !== id);
 
-    // Se pk removida → limpa PK
-    if (formik.values.primaryKey === id) {
+    if (formik.values.is_pk === id) {
       formik.setFieldValue('primaryKey', '');
     }
 
@@ -251,7 +238,7 @@ export default function TableModal({
                     <tr
                       key={column.id}
                       className={`border-b border-gray-100 ${
-                        formik.values.primaryKey === column.id
+                        formik.values.is_pk === column.id
                           ? 'bg-green-50'
                           : 'hover:bg-gray-50'
                       }`}
@@ -299,10 +286,10 @@ export default function TableModal({
                       <td className='px-4 py-3 text-center'>
                         <input
                           type='radio'
-                          name='primaryKey'
-                          checked={formik.values.primaryKey === column.id}
+                          name='is_pk'
+                          checked={formik.values.is_pk === column.id}
                           onChange={() =>
-                            formik.setFieldValue('primaryKey', column.id)
+                            formik.setFieldValue('is_pk', column.id)
                           }
                           className='w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer'
                           title='Definir como Primary Key'

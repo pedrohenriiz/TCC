@@ -11,10 +11,8 @@ export function useMigrationProjectOriginTableUpdate() {
   return useMutation({
     mutationFn: updateMigrationProjectOriginTable,
     onSuccess: (data, variables) => {
-      updateSourceTable(table.id, {
-        name: values.name.trim(),
-        columns: formattedColumns,
-      });
+      updateSourceTable(variables.migrationProjectId, data);
+      success('Tabela de origem atualizada com sucesso!');
     },
     onError: () => {
       error('Falha ao atualizar tabela de origem!');

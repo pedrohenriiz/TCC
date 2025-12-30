@@ -241,7 +241,7 @@ class MappingService:
             print(f"  ✅ Total: {len(rows)} registros")
     
     def _resolve_foreign_keys(self, mapped_rows_by_table: Dict[str, List[Dict]], 
-                             fk_mappings: Dict[int, List[Dict]]):
+                         fk_mappings: Dict[int, List[Dict]]):
         """
         Resolve FKs usando os mapeamentos de mapping_columns.
         """
@@ -268,31 +268,55 @@ class MappingService:
                 if not rows or source_column not in rows[0]:
                     print(f"⚠️ Coluna {source_column} não encontrada em {table.name}")
                     print(f"   Colunas disponíveis: {list(rows[0].keys()) if rows else []}")
-                    print(f"   Isso acontece porque {source_column} foi mapeada para outra tabela")
                     continue
                 
                 print(f"🔄 Resolvendo FK: {table.name}.{source_column} -> {reference_entity}.{target_column}")
                 
-                # DEBUG: Mostra o que está tentando resolver
                 if rows:
                     sample_value = rows[0].get(source_column)
                     print(f"  🔍 Exemplo de valor a resolver: '{sample_value}'")
                 
                 try:
-                    # Usa o resolve_rows que já existe
+                    original_count = len(rows)
+                    
+                    # Passa o table_name para gerar IDs únicos
                     mapped_rows_by_table[destiny_table_id] = resolver.resolve_rows(
                         rows=mapped_rows_by_table[destiny_table_id],
                         source_column=source_column,
                         target_column=target_column,
-                        entity=reference_entity
+                        entity=reference_entity,
+                        table_name=table.name  # ← IMPORTANTE: Passa o nome da tabela!
                     )
                     
-                    print(f"✅ FK resolvida: {table.name}.{target_column} (substituiu {source_column})")
+                    new_count = len(mapped_rows_by_table[destiny_table_id])
+                    
+                    if new_count > original_count:
+                        print(f"✅ FK resolvida: {table.name}.{target_column} ({original_count} → {new_count} linhas expandidas!)")
+                    else:
+                        print(f"✅ FK resolvida: {table.name}.{target_column}")
+                        
                 except ValueError as e:
                     print(f"❌ Erro ao resolver FK: {e}")
                     continue
     
-    def get_by_migration_project(self, migration_project_id: int):
+    def get_by_migration_project(
+        self, 
+        migration_project_id: int,
+        allow_duplicates: bool = False,
+        duplicate_strategy: str = 'first'
+    ):
+        """
+        Args:
+            migration_project_id: ID do projeto de migração
+            allow_duplicates: Se True, permite chaves naturais duplicadas
+            duplicate_strategy: Estratégia para resolver duplicatas ('first', 'last')
+        """
+        # Cria o contexto com as configurações
+        self.context = MigrationContext(
+            allow_duplicates=allow_duplicates,
+            duplicate_strategy=duplicate_strategy
+        )
+        
         # 1️⃣ Buscar projeto + mappings
         migration_project = self.repo.get_by_migration_project_id(migration_project_id)
         migration_helpers = MigrationHelpers()
@@ -321,20 +345,26 @@ class MappingService:
             table = self.table_config.get_by_id(int(table_id))
             if rows:
                 print(f"  {table.name} (ID={table_id}): {len(rows)} linhas")
-                print(f"    Colunas: {list(rows[0].keys())}")
-                print(f"    Primeira linha: {rows[0]}")
             else:
                 print(f"  {table.name} (ID={table_id}): vazio")
 
-        # 4️⃣ Registrar PKs de TODAS as tabelas primeiro
-        print("🟢 VAI CHAMAR _register_primary_keys")
-        self._register_primary_keys(mapped_rows_by_table)
-        print("🟢 TERMINOU _register_primary_keys")
+        # 4️⃣ Registrar PKs de TODAS as tabelas
+        try:
+            self._register_primary_keys(mapped_rows_by_table)
+        except ValueError as e:
+            # Duplicata detectada em modo estrito
+            print(f"\n❌ ERRO: {e}")
+            print("\n💡 Dica: Use 'allow_duplicates=True' para permitir duplicatas")
+            raise
 
-        # 5️⃣ Resolver FKs usando os mapeamentos explícitos
+        # 5️⃣ Verificar se houve duplicatas
+        if self.context.has_duplicates():
+            self.context.print_duplicate_report()
+
+        # 6️⃣ Resolver FKs usando os mapeamentos explícitos
         self._resolve_foreign_keys(mapped_rows_by_table, fk_mappings)
 
-        # 6️⃣ Gerar SQL
+        # 7️⃣ Gerar SQL
         sql_builder = MigrationSQLBuilder()
         file_builder = MigrationSQLFileBuilder("/app/sql_output")
         sql_blocks = []
@@ -348,15 +378,20 @@ class MappingService:
             if sql:
                 sql_blocks.append(sql)
 
-        # 7️⃣ Escrever arquivo
+        # 8️⃣ Escrever arquivo
         file_path = file_builder.write(
             migration_project_name=migration_project.name,
             sql_blocks=sql_blocks
         )
+
+        # 9️⃣ Estatísticas
+        stats = self.context.get_stats()
 
         return {
             "migration_project_id": migration_project_id,
             "sql_file": str(file_path),
             "tables": list(mapped_rows_by_table.keys()),
             "total_tables": len(mapped_rows_by_table),
+            "duplicate_warnings": len(self.context.get_duplicate_warnings()),
+            "stats": stats
         }

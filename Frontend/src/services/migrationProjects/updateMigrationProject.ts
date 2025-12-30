@@ -7,7 +7,10 @@ export async function updateMigrationProject({
   id: number;
   data: unknown;
 }) {
-  const response = await api.patch(`/migration-projects/${id}`, data);
+  const { data: responseData } = await api.patch(
+    `/migration-projects/${id}`,
+    data
+  );
 
-  return response.data;
+  return responseData;
 }

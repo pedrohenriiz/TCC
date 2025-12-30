@@ -1,4 +1,4 @@
-import { Trash2, FileSpreadsheet, Plus, Pen } from 'lucide-react';
+import { Trash2, Plus, Pen } from 'lucide-react';
 import { useState } from 'react';
 import DataTable from '../../../../components/DataTable';
 import useSourceTablesStore from '../../../../store/useSourceTableStore';
@@ -10,7 +10,30 @@ import TableButton from '../../../../components/TableButton';
 import ConfirmModal from '../../../../components/ConfirmModal';
 import { useMigrationProjectOriginTableDelete } from '../../../../hooks/MigrationProjectsOriginTables/useMigrationProjectOriginTableDelete';
 
-export default function Table({ onParentHandleFormSubmit }) {
+interface TableProps {
+  onParentHandleFormSubmit: () => void;
+}
+
+interface RowProps {
+  id: number;
+  name: string;
+  migration_project_id: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+  columns: {
+    id: number;
+    is_pk: boolean;
+    name: string;
+    origin_table_id: number;
+    type: string;
+    updated_at: string;
+    created_at: string;
+    deleted_at: string;
+  }[];
+}
+
+export default function Table({ onParentHandleFormSubmit }: TableProps) {
   const { id } = useParams() as { id: string };
 
   const deleteMutation = useMigrationProjectOriginTableDelete();
@@ -22,8 +45,9 @@ export default function Table({ onParentHandleFormSubmit }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingRow, setDeletingRow] = useState<{
     id: number;
+    name: string;
   } | null>(null);
-  const [editTable, setEditTable] = useState<any>(null);
+  const [editTable, setEditTable] = useState<RowProps | null>(null);
 
   const sourceTables = getSourceTablesByProject();
 
@@ -43,8 +67,8 @@ export default function Table({ onParentHandleFormSubmit }) {
     handleCloseModal();
   };
 
-  const handleOpenDeleteModal = (table: any) => {
-    setDeletingRow({ id: table.id });
+  const handleOpenDeleteModal = (table: RowProps) => {
+    setDeletingRow({ id: table.id, name: table.name });
     setShowDeleteModal(true);
   };
 
@@ -52,7 +76,7 @@ export default function Table({ onParentHandleFormSubmit }) {
     {
       name: 'name',
       header: 'Nome da Tabela',
-      accessor: (row: any) => row.name,
+      accessor: (row: RowProps) => row.name,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
@@ -62,7 +86,7 @@ export default function Table({ onParentHandleFormSubmit }) {
     {
       name: 'columns',
       header: 'Colunas',
-      accessor: (row: any) => row.columns.length,
+      accessor: (row: RowProps) => row.columns.length,
       sortable: true,
       searchable: false,
       headerAlign: 'text-center',
@@ -72,7 +96,8 @@ export default function Table({ onParentHandleFormSubmit }) {
     {
       name: 'createdAt',
       header: 'Criado em',
-      accessor: (row: any) => new Date(row.createdAt).toLocaleString('pt-BR'),
+      accessor: (row: RowProps) =>
+        new Date(row.created_at).toLocaleString('pt-BR'),
       sortable: true,
       searchable: false,
       headerAlign: 'text-left',
@@ -88,28 +113,31 @@ export default function Table({ onParentHandleFormSubmit }) {
       headerAlign: 'text-center',
       cellAlign: 'text-center',
       width: '100px',
-      render: (_: any, row: any) => (
-        <div className='flex items-center justify-center gap-2'>
-          <TableButton
-            variant='edit'
-            Icon={<Pen className='w-4 h-4' />}
-            text='Editar tabela'
-            onClick={() => {
-              setShowCreateModal(true);
-              setEditTable(row);
-            }}
-          />
+      render: (_: null, row: RowProps) => {
+        return (
+          <div className='flex items-center justify-center gap-2'>
+            <TableButton
+              variant='edit'
+              Icon={<Pen className='w-4 h-4' />}
+              title='Editar tabela'
+              onClick={() => {
+                setShowCreateModal(true);
 
-          <TableButton
-            variant='delete'
-            Icon={<Trash2 className='w-4 h-4' />}
-            text='Excluir tabela'
-            onClick={() => {
-              handleOpenDeleteModal(row);
-            }}
-          />
-        </div>
-      ),
+                setEditTable(row);
+              }}
+            />
+
+            <TableButton
+              variant='delete'
+              Icon={<Trash2 className='w-4 h-4' />}
+              title='Excluir tabela'
+              onClick={() => {
+                handleOpenDeleteModal(row);
+              }}
+            />
+          </div>
+        );
+      },
     },
   ];
 

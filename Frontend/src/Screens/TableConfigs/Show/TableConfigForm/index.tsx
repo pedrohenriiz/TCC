@@ -1,37 +1,46 @@
-export default function TableConfigForm() {
+import Textfield from '../../../../components/Inputs/Textfield';
+import type { FormProps } from '../types';
+
+export default function TableConfigForm({
+  formik,
+  isLoading,
+}: {
+  formik: FormProps;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className='grid grid-cols-2 gap-4 mb-6'>
+        <div className='space-y-2'>
+          <div className='h-4 w-32 bg-gray-200 rounded skeleton-shimmer'></div>
+          <div className='h-11 w-full bg-gray-200 rounded-lg skeleton-shimmer'></div>
+        </div>
+
+        <div className='space-y-2'>
+          <div className='h-4 w-40 bg-gray-200 rounded skeleton-shimmer'></div>
+          <div className='h-11 w-full bg-gray-200 rounded-lg skeleton-shimmer'></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='grid grid-cols-2 gap-4 mb-6'>
-      <div>
-        <label className='block text-sm font-medium mb-2'>
-          Nome da Tabela *
-        </label>
-        <input
-          type='text'
-          value={currentTable.name}
-          onChange={(e) =>
-            setCurrentTable({ ...currentTable, name: e.target.value })
-          }
-          placeholder='ex: cliente'
-          className='w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500'
-        />
-      </div>
-      <div>
-        <label className='block text-sm font-medium mb-2'>
-          Nome de Exibição
-        </label>
-        <input
-          type='text'
-          value={currentTable.displayName}
-          onChange={(e) =>
-            setCurrentTable({
-              ...currentTable,
-              displayName: e.target.value,
-            })
-          }
-          placeholder='ex: Clientes'
-          className='w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500'
-        />
-      </div>
+      <Textfield
+        formik={formik}
+        name='name'
+        placeholder='customers'
+        label='Nome da tabela'
+        required
+      />
+
+      <Textfield
+        formik={formik}
+        name='exhibition_name'
+        placeholder='Cliente'
+        label='Nome de exibição'
+        required
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ interface CustomHeaderProps {
     iconPosition: 'left' | 'right';
     Icon: React.ReactNode;
     text: string;
+    type?: 'submit' | 'button' | 'reset';
   };
   title: string;
   subtitle?: string;
@@ -42,7 +43,9 @@ export default function CustomHeader({
             <div>
               <PageHeader title={title} />
               {subtitle && (
-                <p className='text-xs text-gray-600 mt-0.5'>{subtitle}</p>
+                <p className='text-xs text-gray-600 mt-0.5 text-left'>
+                  {subtitle}
+                </p>
               )}
             </div>
           </div>
@@ -53,6 +56,7 @@ export default function CustomHeader({
               iconPosition={buttonProps.iconPosition}
               onClick={buttonProps.onClick}
               text={buttonProps.text}
+              type={buttonProps.type}
             />
           )}
         </div>

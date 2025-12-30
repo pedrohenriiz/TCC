@@ -12,9 +12,10 @@ export function useTableConfigUpdate() {
     onSuccess: (updatedTable) => {
       // Atualiza o detalhe, se existir
 
-      queryClient.setQueryData(['tableConfig', String(updatedTable.id)], {
-        data: updatedTable,
-      });
+      queryClient.setQueryData(
+        ['tableConfig', String(updatedTable.id)],
+        updatedTable
+      );
 
       //   // Invalida a lista de tabelas para recarregar
       //   queryClient.invalidateQueries({

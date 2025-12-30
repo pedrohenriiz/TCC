@@ -1,9 +1,11 @@
 import api from '../baseApi';
 
 interface RequestDataProps {
+  id: number;
   name: string;
   columns?:
     | {
+        id: number;
         name: string;
         type: string;
         is_pk: boolean;

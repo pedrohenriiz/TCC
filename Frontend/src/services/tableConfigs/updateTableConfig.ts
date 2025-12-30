@@ -7,7 +7,7 @@ export async function updateTableConfig({
   id: number;
   data: unknown;
 }) {
-  const response = await api.patch(`/table-configs/${id}`, data);
+  const { data: responseData } = await api.patch(`/table-configs/${id}`, data);
 
-  return response.data;
+  return responseData;
 }

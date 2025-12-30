@@ -2,9 +2,11 @@ import * as Yup from 'yup';
 
 import Form from './Form';
 import Table from './Table';
-import { CheckCircle2, Settings } from 'lucide-react';
+import { CheckCircle2, Plus, Settings } from 'lucide-react';
 import ConfirmButton from '../../../components/ConfirmButton';
-import useSourceTablesStore from '../../../store/useSourceTableStore';
+import useSourceTablesStore, {
+  type SourceTable,
+} from '../../../store/useSourceTableStore';
 import { useFormik } from 'formik';
 import { useQuery } from '@tanstack/react-query';
 import { getUniqueMigrationProject } from '../../../services/migrationProjects/getUniqueMigrationProject';
@@ -14,6 +16,12 @@ import { useMigrationProjectUpdate } from '../../../hooks/MigrationProjects/useM
 import PagetTitle from '../../../components/PageTitle';
 import CustomHeader from '../../../components/CustomHeader';
 import useSetOriginTables from './hooks/useSetOriginTables';
+
+interface FormattedDataProps {
+  name: string;
+  description: string;
+  origin_tables: SourceTable[];
+}
 
 const validationSchema = Yup.object({
   name: Yup.string()
@@ -48,7 +56,7 @@ export default function ProjectForm() {
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
-      const formattedData = {
+      const formattedData: FormattedDataProps = {
         name: values.name,
         description: values.description,
         origin_tables: [],
@@ -86,6 +94,16 @@ export default function ProjectForm() {
         handleGoBack={() => navigate('/migration-projects')}
         showBackButton
         subtitle='Configure o projeto de migração'
+        buttonProps={{
+          Icon: <Plus className='w-4 h-4' />,
+          iconPosition: 'left',
+          onClick: () => {
+            formik.handleSubmit();
+          },
+          text: id === 'new' ? 'Criar Projeto' : 'Salvar Alterações',
+          type: 'submit',
+        }}
+        showConfirmButton
       />
 
       <div className='max-w-6xl mx-auto'>
