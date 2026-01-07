@@ -61,8 +61,6 @@ export default function TableConfigsShow() {
   const initialValues = mapApiToFormik();
 
   async function onSubmit(values: OnSubmitFormProps) {
-    console.log(values);
-
     const payload = values.columns.map((col) => ({
       name: col.name,
       type: col.type,

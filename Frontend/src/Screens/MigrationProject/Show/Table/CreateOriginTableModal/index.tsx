@@ -35,8 +35,6 @@ export default function TableModal({
   const { updateSourceTable, tableNameExists, sourceTables } =
     useSourceTablesStore();
 
-  console.log(sourceTables);
-
   const validationSchema = Yup.object({
     name: Yup.string()
       .trim()
@@ -108,12 +106,14 @@ export default function TableModal({
       }
 
       const formattedColumns = columns.map((col) => ({
-        id: col.id,
+        id: typeof col.id === 'number' ? col.id : undefined,
         name: col.name.trim(),
         type: col.type,
         is_pk: col.id === is_pk,
         origin_table_id: table?.id as number,
       }));
+
+      console.log('formattedColumns', formattedColumns);
 
       if (isEditMode && table) {
         update.mutate({
@@ -159,7 +159,7 @@ export default function TableModal({
     ]);
   };
 
-  const handleRemoveColumn = (id: number) => {
+  const handleRemoveColumn = (id?: number) => {
     const newColumns = formik.values.columns.filter((c) => c.id !== id);
 
     if (formik.values.is_pk === id) {

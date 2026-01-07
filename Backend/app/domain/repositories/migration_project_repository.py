@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session, joinedload, selectinload
 from domain.entities.migration_project import MigrationProject, MigrationProjectOriginTable, MigrationProjectOriginTableColumn
+from domain.entities.mapping import Mapping, MappingColumn, MappingTransformationParamValue, MappingTransformation
 from interfaces.schemas.migration_project_schema import MigrationProjectCreate
 
 class MigrationProjectRepository:
@@ -47,6 +48,8 @@ class MigrationProjectRepository:
     
     def list_migration_projects(self):
         """Lista todos os projetos com tabelas e colunas relacionadas."""
+
+        print('Aqui dentro')
 
         # Faz eager load das tabelas e colunas
         query = (
@@ -174,16 +177,30 @@ class MigrationProjectRepository:
             if field in col_data:
                 setattr(column, field, col_data[field])
     
-    def get_by_id(self, migration_project_id: int) -> MigrationProject:
-        return (
+    def get_by_id(self, migration_project_id: int):
+        print("batata")
+        
+        query = (
             self.db.query(MigrationProject)
             .options(
                 selectinload(MigrationProject.origin_tables)
-                .selectinload(MigrationProjectOriginTable.columns)
+                .selectinload(MigrationProjectOriginTable.columns),
+                
+                selectinload(MigrationProject.mappings)
+                .selectinload(Mapping.columns)
+                .selectinload(MappingColumn.transformations)
+                .selectinload(MappingTransformation.param_values),
+                
+                selectinload(MigrationProject.mappings)
+                .selectinload(Mapping.columns)
+                .selectinload(MappingColumn.transformations)
+                .selectinload(MappingTransformation.transformation_type)
             )
             .filter(MigrationProject.id == migration_project_id)
             .first()
         )
+        
+        return query
 
     def delete_migration_project(self, migration_project_id: int):
         migration_project = self.db.query(MigrationProject).filter(MigrationProject.id == migration_project_id).first()

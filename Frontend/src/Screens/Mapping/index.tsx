@@ -61,8 +61,6 @@ export default function MappingPageLayout() {
     setOpenModal(true);
   }
   function handleOpenEditMapping(mapping?: MappingDataProps | null = null) {
-    console.log('esse', mapping);
-
     setEditingRow(mapping);
     setOpenModal(true);
   }
@@ -87,8 +85,6 @@ export default function MappingPageLayout() {
       Icon: <Map className='w-5 h-5 text-purple-600' />,
     },
   ];
-
-  console.log('originTables', originTables);
 
   return (
     <div className='min-h-screen bg-gray-50'>

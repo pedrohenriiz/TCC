@@ -5,7 +5,7 @@ interface RequestDataProps {
   name: string;
   columns?:
     | {
-        id: number;
+        id?: number;
         name: string;
         type: string;
         is_pk: boolean;

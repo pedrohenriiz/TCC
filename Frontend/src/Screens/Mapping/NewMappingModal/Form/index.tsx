@@ -2,11 +2,7 @@ import { Field, FieldArray } from 'formik';
 import type { FormValuesProps } from '..';
 import { Plus, Trash2 } from 'lucide-react';
 import ConfirmButton from '../../../../components/ConfirmButton';
-
-interface TableOptionsProps {
-  id: number;
-  name: string;
-}
+import TransformationsSection from './Transformations';
 
 interface DestinyDataProps {
   columns: {
@@ -43,7 +39,6 @@ interface OriginDataProps {
 
 interface MappingFormProps {
   values: FormValuesProps;
-  tableOptions: TableOptionsProps[];
   destinyData: DestinyDataProps[];
   originData: OriginDataProps[];
 }
@@ -52,19 +47,13 @@ export default function MappingForm({
   values,
   destinyData,
   originData,
-  tableOptions,
 }: MappingFormProps) {
-  //   const transformationOptions = [
-  //     { value: 'trim', label: '✂️ Trim - Remove espaços' },
-  //     { value: 'uppercase', label: '🔤 Uppercase - Maiúsculas' },
-  //     { value: 'lowercase', label: '🔡 Lowercase - Minúsculas' },
-  //     { value: 'split', label: '✂️ Split - Dividir texto' },
-  //     { value: 'concat', label: '🔗 Concatenar' },
-  //     { value: 'formatNumber', label: '🔢 Formatar número' },
-  //     { value: 'formatDate', label: '📅 Formatar data' },
-  //   ];
-
-  console.log('originData', originData);
+  const tableOptions = originData.map((item: OriginDataProps) => {
+    return {
+      id: item.id,
+      name: item.name,
+    };
+  });
 
   const getDestinyColumnsByTableId = (destinyTableId: number) => {
     if (!destinyTableId) {
@@ -100,8 +89,6 @@ export default function MappingForm({
     );
   };
 
-  console.log(values);
-
   return (
     <FieldArray name='columns'>
       {({ push, remove }) => (
@@ -117,7 +104,7 @@ export default function MappingForm({
           ) : (
             values.columns?.map((mapping, index: number) => (
               <div
-                key={mapping.id}
+                key={mapping.id || index}
                 className='bg-gray-50 border-2 border-gray-200 rounded-xl p-6 hover:border-gray-300 hover:shadow-md transition-all'
               >
                 {/* Grid de Seleção */}
@@ -147,7 +134,7 @@ export default function MappingForm({
                     <Field
                       as='select'
                       name={`columns.${index}.origin_column_id`}
-                      disabled={!mapping.origin_table_id} // Desabilita se não tiver tabela selecionada
+                      disabled={!mapping.origin_table_id}
                       className='w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed'
                     >
                       <option value=''>
@@ -174,6 +161,7 @@ export default function MappingForm({
                       name={`columns.${index}.destiny_table_id`}
                       className='w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
                     >
+                      <option value=''>Selecionar</option>
                       {destinyData.map((option) => {
                         return (
                           <option key={option.id} value={option.id}>
@@ -221,6 +209,9 @@ export default function MappingForm({
                     </button>
                   </div>
                 </div>
+
+                {/* Seção de Transformações */}
+                <TransformationsSection columnIndex={index} mapping={mapping} />
               </div>
             ))
           )}
@@ -229,11 +220,10 @@ export default function MappingForm({
             type='button'
             onClick={() =>
               push({
-                id: Date.now(),
-                sourceTable: '',
-                sourceColumn: '',
-                destTable: '',
-                destColumn: '',
+                origin_table_id: 0,
+                origin_column_id: 0,
+                destiny_table_id: 0,
+                destiny_column_id: 0,
                 transformations: [],
               })
             }

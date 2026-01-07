@@ -18,14 +18,15 @@ class Mapping(Base):
 
     migration_project = relationship(
         "MigrationProject",
-        back_populates="mappings"
+        back_populates="mappings",
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
     columns = relationship(
         "MappingColumn",
         back_populates="mapping",
         cascade="all, delete-orphan",
-        lazy="joined"
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
 class MappingColumn(Base):
@@ -47,26 +48,26 @@ class MappingColumn(Base):
 
     origin_table = relationship(
         "MigrationProjectOriginTable",
-        lazy="joined"
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
     origin_column = relationship(
         "MigrationProjectOriginTableColumn",
-        lazy="joined"
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
     # Destino
     destiny_table = relationship(
         "TableConfigs",
         foreign_keys=[destiny_table_id],
-        lazy="joined",
+        lazy="select",  # ✅ MUDEI de "joined" para "select"
         back_populates="mapping_columns"
     )
 
     destiny_column = relationship(
         "TableConfigColumns",
         foreign_keys=[destiny_column_id],
-        lazy="joined",
+        lazy="select",  # ✅ MUDEI de "joined" para "select"
         back_populates="mapping_columns"
     )
 
@@ -74,13 +75,14 @@ class MappingColumn(Base):
     mapping = relationship(
         "Mapping",
         back_populates="columns",
-        lazy="joined"
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
     transformations = relationship(
         "MappingTransformation",
         back_populates="mapping_column",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="select"  # ✅ ADICIONEI lazy="select"
     )
 
 class MappingTransformation(Base):
@@ -108,19 +110,20 @@ class MappingTransformation(Base):
     mapping_column = relationship(
         "MappingColumn",
         back_populates="transformations",
-        lazy="joined"
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
     transformation_type = relationship(
         "TransformationType",
         back_populates="transformations",
-        lazy="joined"
+        lazy="select"  # ✅ MUDEI de "joined" para "select"
     )
 
     param_values = relationship(
         "MappingTransformationParamValue",
         back_populates="transformation",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="select"  # ✅ ADICIONEI lazy="select"
     )
 
 class MappingTransformationParamValue(Base):
@@ -146,10 +149,12 @@ class MappingTransformationParamValue(Base):
 
     transformation = relationship(
         "MappingTransformation",
-        back_populates="param_values"
+        back_populates="param_values",
+        lazy="select"  # ✅ ADICIONEI lazy="select"
     )
 
     param_definition = relationship(
         "TransformationSchemaDefinition",
-        back_populates="param_values"
+        back_populates="param_values",
+        lazy="select"  # ✅ ADICIONEI lazy="select"
     )

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface SourceTableColumnProps {
-  id: number;
+  id?: number;
   name: string;
   type: string;
   is_pk: boolean;

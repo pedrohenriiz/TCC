@@ -50,26 +50,30 @@ interface MappingModalProps {
   data: MappingDataProps | undefined;
 }
 
+interface TransformationProps {
+  id?: number;
+  transformation_type_id: number;
+  order: number;
+  param_values?: {
+    param_definition_id: number;
+    value: string;
+  }[];
+}
+
 interface ColumnProps {
-  id: number;
+  id?: number;
   origin_table_id: number;
   origin_column_id: number;
   destiny_table_id: number;
   destiny_column_id: number;
+  transformations?: TransformationProps[];
 }
 
 export interface FormValuesProps {
   id: string | number;
   mappingName: string;
   status: 'COMPLETE' | 'INCOMPLETE';
-  columns?: {
-    id: number;
-    origin_table_id: number;
-    origin_column_id: number;
-    destiny_table_id: number;
-    destiny_column_id: number;
-    // transformations: never[];
-  }[];
+  columns?: ColumnProps[];
 }
 
 export default function MappingModal({
@@ -83,27 +87,6 @@ export default function MappingModal({
   const create = useMigrationProjectMappingCreate();
   const update = useMigrationProjectMappingUpdate();
 
-  console.log('destinyData', destinyData);
-
-  console.log('data', data);
-
-  // const transformationOptions = [
-  //   { value: 'trim', label: '✂️ Trim - Remove espaços' },
-  //   { value: 'uppercase', label: '🔤 Uppercase - Maiúsculas' },
-  //   { value: 'lowercase', label: '🔡 Lowercase - Minúsculas' },
-  //   { value: 'split', label: '✂️ Split - Dividir texto' },
-  //   { value: 'concat', label: '🔗 Concatenar' },
-  //   { value: 'formatNumber', label: '🔢 Formatar número' },
-  //   { value: 'formatDate', label: '📅 Formatar data' },
-  // ];
-
-  const tableOptions = originData.map((item: OriginDataProps) => {
-    return {
-      id: item.id,
-      name: item.name,
-    };
-  });
-
   // Schema de validação com Yup
   const validationSchema = Yup.object({
     mappingName: Yup.string()
@@ -112,24 +95,27 @@ export default function MappingModal({
     status: Yup.string()
       .required('Status é obrigatório')
       .oneOf(['COMPLETE', 'INCOMPLETE'], 'Status inválido'),
-    // mappings: Yup.array()
-    //   .of(
-    //     Yup.object({
-    //       sourceTable: Yup.string().required('Tabela origem é obrigatória'),
-    //       sourceColumn: Yup.string().required('Coluna origem é obrigatória'),
-    //       destTable: Yup.string().required('Tabela destino é obrigatória'),
-    //       destColumn: Yup.string().required('Coluna destino é obrigatória'),
-    //       transformations: Yup.array().of(
-    //         Yup.object({
-    //           type: Yup.string().required(
-    //             'Tipo de transformação é obrigatório'
-    //           ),
-    //         })
-    //       ),
-    //     }).nullable()
-    //   )
-    //   .nullable()
-    //   .notRequired(),
+    columns: Yup.array().of(
+      Yup.object().shape({
+        transformations: Yup.array().test(
+          'unique-orders',
+          'Há ordens duplicadas nas transformações',
+          function (transformations) {
+            if (!transformations || transformations.length === 0) return true;
+
+            const orders = transformations
+              .map((t: any) => t.order)
+              .filter(
+                (order: any) =>
+                  order !== '' && order !== null && order !== undefined
+              );
+
+            const uniqueOrders = new Set(orders);
+            return orders.length === uniqueOrders.size;
+          }
+        ),
+      })
+    ),
   });
 
   const formattedInitialColumns = data?.columns?.map(
@@ -140,13 +126,24 @@ export default function MappingModal({
         origin_column_id: col.origin_column_id,
         destiny_table_id: col.destiny_table_id,
         destiny_column_id: col.destiny_column_id,
-        transformations: [],
+        transformations:
+          col.transformations?.map((trans: any) => ({
+            id: trans.id,
+            transformation_type_id: trans.transformation_type_id,
+            order: trans.order,
+            param_values:
+              trans.param_values?.map((param: any) => ({
+                id: param.id,
+                param_definition_id: param.param_definition_id,
+                value: param.value,
+              })) || [],
+          })) || [],
       };
     }
   );
 
   // Valores iniciais
-  const initialValues = {
+  const initialValues: FormValuesProps = {
     id: data?.id || '',
     mappingName: data?.name || '',
     status: data?.status || 'INCOMPLETE',
@@ -155,11 +152,10 @@ export default function MappingModal({
         ? formattedInitialColumns
         : [
             {
-              id: '',
-              origin_table_id: '',
-              origin_column_id: '',
-              destiny_table_id: '',
-              destiny_column_id: '',
+              origin_table_id: 0,
+              origin_column_id: 0,
+              destiny_table_id: 0,
+              destiny_column_id: 0,
               transformations: [],
             },
           ],
@@ -167,12 +163,30 @@ export default function MappingModal({
 
   const handleSubmit = (values: FormValuesProps) => {
     const formattedColumns = values.columns?.map((col) => {
-      const data = {
+      const data: ColumnProps = {
         origin_table_id: col.origin_table_id,
         origin_column_id: col.origin_column_id,
         destiny_table_id: col.destiny_table_id,
         destiny_column_id: col.destiny_column_id,
-      } as ColumnProps;
+        transformations:
+          col.transformations
+            ?.filter(
+              (trans) =>
+                trans.transformation_type_id &&
+                trans.transformation_type_id !== ''
+            ) // ✨ FILTRAR vazios
+            ?.map((trans) => ({
+              id: trans.id,
+              transformation_type_id: Number(trans.transformation_type_id),
+              order: Number(trans.order),
+              param_values:
+                trans.param_values?.map((param) => ({
+                  id: param.id,
+                  param_definition_id: Number(param.param_definition_id),
+                  value: String(param.value),
+                })) || [],
+            })) || [],
+      };
 
       if (col.id) {
         data.id = col.id;
@@ -214,44 +228,29 @@ export default function MappingModal({
 
   if (!isOpen) return null;
 
-  // const getColumnsByTableId = (tableId: number) => {
-  //   if (!tableId) return [];
+  const hasAnyDuplicateOrders = (values: FormValuesProps) => {
+    if (!values.columns) return false;
 
-  //   const selectedTable = originData.origin_tables.find(
-  //     (table) => table.id === Number(tableId)
-  //   );
+    return values.columns.some((column) => {
+      if (!column.transformations || column.transformations.length === 0)
+        return false;
 
-  //   // Assumindo que suas tabelas têm um array de colunas
-  //   // Ajuste conforme a estrutura real dos seus dados
-  //   return (
-  //     selectedTable?.columns?.map((col) => ({
-  //       value: col.id || col.name,
-  //       label: col.name,
-  //     })) || []
-  //   );
-  // };
+      const orders = column.transformations
+        .map((t) => t.order)
+        .filter(
+          (order) => order !== '' && order !== null && order !== undefined
+        );
 
-  // const getDestinyColumnsByTableId = (destinyTableId: number) => {
-  //   if (!destinyTableId) {
-  //     return [];
-  //   }
-
-  //   const selectedDestinyTable = destinyData.find(
-  //     (table) => table.id === Number(destinyTableId)
-  //   );
-
-  //   return selectedDestinyTable.columns.map((col) => ({
-  //     value: col.id,
-  //     label: col.name,
-  //   }));
-  // };
+      const uniqueOrders = new Set(orders);
+      return orders.length !== uniqueOrders.size;
+    });
+  };
 
   return (
     <Formik
       initialValues={initialValues}
       validationSchema={validationSchema}
       onSubmit={handleSubmit}
-      validateOnChange={false}
       validateOnBlur={false}
       enableReinitialize
     >
@@ -265,18 +264,16 @@ export default function MappingModal({
         handleBlur,
         handleSubmit: formikSubmit,
       }) => {
-        console.log('values', values);
-
+        const hasDuplicates = hasAnyDuplicateOrders(values);
         return (
           <LargeModal
             title='Mapear colunas'
             isSubmitting={isSubmitting}
-            isValid={isValid}
+            isValid={isValid && !hasDuplicates}
             onClose={() => handleClose()}
             onSubmit={formikSubmit}
           >
             <div className='flex-1 overflow-y-auto px-8 py-8'>
-              {/* Nome do Mapeamento */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
                 <Textfield
                   formik={{
@@ -322,7 +319,6 @@ export default function MappingModal({
                 <MappingForm
                   destinyData={destinyData}
                   originData={originData}
-                  tableOptions={tableOptions}
                   values={values}
                 />
               </div>

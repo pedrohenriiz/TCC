@@ -16,6 +16,7 @@ class TransformationBase(BaseModel):
     code: str
     name: str
     description: str
+    category: str
     created_at: Optional[datetime]
 
 class TransformationBaseCreate(TransformationBase):

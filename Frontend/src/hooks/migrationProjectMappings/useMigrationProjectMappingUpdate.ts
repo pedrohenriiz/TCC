@@ -9,6 +9,8 @@ export function useMigrationProjectMappingUpdate() {
   return useMutation({
     mutationFn: updateMigrationProjectMapping,
     onSuccess: (updatedData) => {
+      console.log('this', updatedData);
+
       queryClient.setQueryData(
         ['mappings', String(updatedData.migration_project_id)],
         (oldData: any) => {

@@ -4,12 +4,13 @@ from domain.services.mapping_service import MappingService
 from infra.database.database import database
 from interfaces.schemas.mapping_schema import (
     MappingCreate,
-    MappingUpdate
+    MappingUpdate,
+    MappingRead  # ← ADICIONAR APENAS ISSO
 )
 
 mapping_router = APIRouter(prefix="/migration-project/{migration_project_id}/mappings", tags=["Mappings"])
 
-@mapping_router.post("/")
+@mapping_router.post("/", response_model=MappingRead)  # ← ADICIONAR response_model
 def create_mapping(request: MappingCreate, db: Session=Depends(database)):
     service = MappingService(db)
     print("request", request)
@@ -17,16 +18,17 @@ def create_mapping(request: MappingCreate, db: Session=Depends(database)):
 
     return mapping
 
-@mapping_router.get("/")
+@mapping_router.get("/")  # ← ADICIONAR response_model
 def list_mapping(migration_project_id:int, db: Session = Depends(database)):
-    print("Esse cara aqui", migration_project_id)
+    print("Esse cara aqui 22", migration_project_id)
     service = MappingService(db)
     data = service.list_mapping(migration_project_id)
 
     return data
 
-@mapping_router.get("/{id}")
+@mapping_router.get("/{id}")  
 def show_mapping(id: int, db: Session = Depends(database)):
+    print("Aqui dentro")
     service = MappingService(db)
     data = service.show_mapping(id)
 
@@ -34,7 +36,8 @@ def show_mapping(id: int, db: Session = Depends(database)):
         raise HTTPException(status_code=400, detail="Mapeamento não encontrado!")
     
     return data
-@mapping_router.patch("/{id}")
+
+@mapping_router.patch("/{id}", response_model=MappingRead)  # ← ADICIONAR response_model
 def update_mapping(id: int, request: MappingUpdate, db: Session= Depends(database)):
     service = MappingService(db)
     data = service.update_mapping(id, request)

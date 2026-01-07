@@ -49,19 +49,15 @@ class ProjectFileService:
         project_path = self._get_project_path(migration_project_name)
         csvs_existentes = list(project_path.glob("*.csv"))
 
-        print(csvs_existentes)
-        print(origin_table_names)
 
         resultado: Dict[str, Path] = {}
 
         for origin_table in origin_table_names:
             for csv in csvs_existentes:
-                print(csv.stem)
                 if csv.stem == origin_table:
                     resultado[origin_table] = csv
                     break
 
-        print(resultado)
         return resultado
 
 

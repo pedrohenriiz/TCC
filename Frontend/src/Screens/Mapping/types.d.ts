@@ -26,6 +26,7 @@ export interface MappingColumnDataProps {
     name: string;
     columns: { id: number; name: string }[];
   };
+  transformations: unknown[];
 }
 
 export interface MappingDataProps {

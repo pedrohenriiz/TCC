@@ -7,6 +7,7 @@ from application.migration_sql_file_builder import MigrationSQLFileBuilder
 from domain.repositories.table_config_repository import TableConfigRepository
 from application.migration_context import MigrationContext
 from application.natural_key_resolver import NaturalKeyResolver
+from application.use_cases.transformation_processor import TransformationProcessor
 from typing import Dict, List, Any, Optional
 
 class MappingService:
@@ -14,6 +15,7 @@ class MappingService:
         self.repo = MappingRepository(db)
         self.table_config = TableConfigRepository(db)
         self.context = MigrationContext()
+        self.transformation_processor = TransformationProcessor(db)
         
     def create_mapping(self, request: MappingCreate):
         return self.repo.create(request)
@@ -241,7 +243,8 @@ class MappingService:
             print(f"  ✅ Total: {len(rows)} registros")
     
     def _resolve_foreign_keys(self, mapped_rows_by_table: Dict[str, List[Dict]], 
-                         fk_mappings: Dict[int, List[Dict]]):
+                        fk_mappings: Dict[int, List[Dict]],
+                        raw_mappings):
         """
         Resolve FKs usando os mapeamentos de mapping_columns.
         """
@@ -263,6 +266,7 @@ class MappingService:
                 source_column = fk_config['source_column']
                 target_column = fk_config['target_column']
                 reference_entity = fk_config['reference_entity']
+                reference_column = fk_config['reference_column']
                 
                 # VERIFICAÇÃO: A coluna de origem existe nos dados?
                 if not rows or source_column not in rows[0]:
@@ -270,22 +274,66 @@ class MappingService:
                     print(f"   Colunas disponíveis: {list(rows[0].keys()) if rows else []}")
                     continue
                 
-                print(f"🔄 Resolvendo FK: {table.name}.{source_column} -> {reference_entity}.{target_column}")
+                print(f"🔄 Resolvendo FK: {table.name}.{source_column} -> {reference_entity}.{reference_column}")
                 
                 if rows:
                     sample_value = rows[0].get(source_column)
-                    print(f"  🔍 Exemplo de valor a resolver: '{sample_value}'")
+                    print(f"  🔍 Valor original na FK: '{sample_value}'")
+                
+                # ✨ DESCOBRE qual coluna da tabela referenciada tem transformações que batem
+                transformations_to_apply = None
+                reference_table_id = None
+                actual_reference_column = None
+                
+                # Encontra a tabela referenciada
+                for dest_table_id, _ in mapped_rows_by_table.items():
+                    temp_table = self.table_config.get_by_id(int(dest_table_id))
+                    if temp_table.name == reference_entity:
+                        reference_table_id = dest_table_id
+                        break
+                
+                if reference_table_id:
+                    # ✨ PROCURA em TODAS as colunas da tabela referenciada por transformações
+                    print(f"  🔍 Procurando transformações em colunas de {reference_entity}")
+                    
+                    for mapping in raw_mappings:
+                        for mapping_column in mapping.columns:
+                            if mapping_column.destiny_table_id == reference_table_id:
+                                if mapping_column.transformations:
+                                    # Encontrou transformações nesta coluna!
+                                    transformations_to_apply = mapping_column.transformations
+                                    actual_reference_column = mapping_column.destiny_column.name
+                                    print(f"  ✅ Encontradas {len(transformations_to_apply)} transformação(ões) em {reference_entity}.{actual_reference_column}")
+                                    break
+                        if transformations_to_apply:
+                            break
+                
+                # ✨ APLICA AS TRANSFORMAÇÕES encontradas
+                if transformations_to_apply:
+                    print(f"  ⚡ Aplicando transformações da coluna {reference_entity}.{actual_reference_column} nos valores de FK")
+                    
+                    for row_index, row in enumerate(rows):
+                        original_value = row[source_column]
+                        transformed_value = self.transformation_processor.apply_transformations(
+                            value=original_value,
+                            transformations=transformations_to_apply
+                        )
+                        row[source_column] = transformed_value
+                        
+                        if row_index == 0:
+                            print(f"    '{original_value}' → '{transformed_value}'")
+                else:
+                    print(f"  ℹ️ Nenhuma transformação encontrada na tabela {reference_entity}")
                 
                 try:
                     original_count = len(rows)
                     
-                    # Passa o table_name para gerar IDs únicos
                     mapped_rows_by_table[destiny_table_id] = resolver.resolve_rows(
                         rows=mapped_rows_by_table[destiny_table_id],
                         source_column=source_column,
                         target_column=target_column,
                         entity=reference_entity,
-                        table_name=table.name  # ← IMPORTANTE: Passa o nome da tabela!
+                        table_name=table.name
                     )
                     
                     new_count = len(mapped_rows_by_table[destiny_table_id])
@@ -299,6 +347,65 @@ class MappingService:
                     print(f"❌ Erro ao resolver FK: {e}")
                     continue
     
+    def _apply_transformations(
+        self, 
+        mapped_rows_by_table: Dict[str, List[Dict]], 
+        raw_mappings
+    ):
+        """
+        Aplica transformações configuradas nos dados mapeados.
+        """
+        print("\n🔄 APLICANDO TRANSFORMAÇÕES:")
+        
+        # Organiza transformações por (destiny_table_id, destiny_column_id)
+        transformations_map = {}
+        
+        for mapping in raw_mappings:
+            for mapping_column in mapping.columns:
+                if not mapping_column.transformations:
+                    continue
+                
+                key = (
+                    mapping_column.destiny_table_id,
+                    mapping_column.destiny_column.name
+                )
+                transformations_map[key] = mapping_column.transformations
+        
+        if not transformations_map:
+            print("Nenhuma transformação configurada.")
+            return
+        
+        # Aplica transformações nos dados
+        for destiny_table_id, rows in mapped_rows_by_table.items():
+            if not rows:
+                continue
+            
+            table = self.table_config.get_by_id(int(destiny_table_id))
+            print(f"\n  Tabela: {table.name}")
+            
+            # Para cada linha
+            for row in rows:
+                # Para cada coluna na linha
+                for column_name in list(row.keys()):
+                    key = (destiny_table_id, column_name)
+                    
+                    if key not in transformations_map:
+                        continue
+                    
+                    transformations = transformations_map[key]
+                    original_value = row[column_name]
+                    
+                    # Aplica transformações
+                    transformed_value = self.transformation_processor.apply_transformations(
+                        value=original_value,
+                        transformations=transformations
+                    )
+                    
+                    # Atualiza o valor
+                    row[column_name] = transformed_value
+                    
+                    print(f"    ✓ {column_name}: '{original_value}' → '{transformed_value}'")
+
     def get_by_migration_project(
         self, 
         migration_project_id: int,
@@ -339,8 +446,9 @@ class MappingService:
         normalized = migration_helpers.normalize_mappings(raw_mappings)
         migration_plan = migration_helpers.build_migration_plan(normalized)
         mapped_rows_by_table = migration_helpers.load_csv_data(migration_plan)
-        
-        print("\n📋 Dados carregados (ANTES de resolver FKs):")
+
+        # ✨ MOVER PARA AQUI - ANTES de registrar PKs
+        print("\n📋 Dados carregados (ANTES de aplicar transformações):")
         for table_id, rows in mapped_rows_by_table.items():
             table = self.table_config.get_by_id(int(table_id))
             if rows:
@@ -348,7 +456,10 @@ class MappingService:
             else:
                 print(f"  {table.name} (ID={table_id}): vazio")
 
-        # 4️⃣ Registrar PKs de TODAS as tabelas
+        # ✨ APLICAR TRANSFORMAÇÕES ANTES DE REGISTRAR PKs
+        self._apply_transformations(mapped_rows_by_table, raw_mappings)
+
+        # 4️⃣ Registrar PKs de TODAS as tabelas (AGORA com valores já transformados)
         try:
             self._register_primary_keys(mapped_rows_by_table)
         except ValueError as e:
@@ -362,7 +473,7 @@ class MappingService:
             self.context.print_duplicate_report()
 
         # 6️⃣ Resolver FKs usando os mapeamentos explícitos
-        self._resolve_foreign_keys(mapped_rows_by_table, fk_mappings)
+        self._resolve_foreign_keys(mapped_rows_by_table, fk_mappings, raw_mappings)
 
         # 7️⃣ Gerar SQL
         sql_builder = MigrationSQLBuilder()
