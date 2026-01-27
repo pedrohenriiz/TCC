@@ -9,6 +9,7 @@ class MigrationProjectOriginColumnBase(BaseModel):
     name: str
     type: str
     is_pk: Optional[bool] = False
+    is_natural_key: Optional[bool] = False
 
 
 class MigrationProjectOriginColumnCreate(MigrationProjectOriginColumnBase):
@@ -20,6 +21,7 @@ class MigrationProjectOriginColumnUpdate(BaseModel):
     name: Optional[str] = None
     type: Optional[str] = None
     is_pk: Optional[bool] = None
+    is_natural_key: Optional[bool] = False
 
 
 class MigrationProjectOriginColumnResponse(BaseModel):
@@ -27,6 +29,7 @@ class MigrationProjectOriginColumnResponse(BaseModel):
     name: str
     type: str
     is_pk: bool
+    is_natural_key: bool
 
     class Config:
         orm_mode = True

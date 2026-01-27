@@ -1,66 +1,50 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+// store/useSettingStore.ts
 
-type SettingColumn = {
-  id: string;
-  column: string;
-  value: string | number | boolean;
-  type: 'string' | 'number' | 'boolean';
-  active: boolean;
+import { create } from 'zustand';
+
+type MigrationSettings = {
+  allow_duplicates: string;
+  duplicate_strategy: string;
 };
 
 type SettingState = {
-  columns: SettingColumn[];
-  editing: SettingColumn | undefined;
-  addColumn: (column: Omit<SettingColumn, 'id'>) => void;
-  updateColumn: (id: string, data: Partial<SettingColumn>) => void;
-  setEditing: (id?: string) => void;
-  removeEditing: () => void;
-  removeColumn: (id: string) => void;
+  migrationSettings: MigrationSettings;
+  isLoading: boolean;
+  error: string | null;
+
+  // Actions
+  setMigrationSettings: (settings: MigrationSettings) => void;
+  updateMigrationSetting: (key: keyof MigrationSettings, value: string) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   reset: () => void;
 };
 
-export const useSettingStore = create<SettingState>()(
-  persist(
-    (set) => ({
-      columns: [
-        {
-          id: '1',
-          column: 'company_id',
-          value: 123,
-          type: 'número',
-          active: true,
-        },
-      ],
-      editing: undefined,
-      addColumn: (column) =>
-        set((state) => ({
-          columns: [...state.columns, { ...column, id: crypto.randomUUID() }],
-        })),
-      updateColumn: (id, data) =>
-        set((state) => ({
-          columns: state.columns.map((col) =>
-            col.id === id ? { ...col, ...data } : col
-          ),
-        })),
+const initialState = {
+  migrationSettings: {
+    allow_duplicates: 'false',
+    duplicate_strategy: 'first',
+  },
+  isLoading: false,
+  error: null,
+};
 
-      removeColumn: (id) =>
-        set((state) => ({
-          columns: state.columns.filter((col) => col.id !== id),
-        })),
-      setEditing: (id) =>
-        set((state) => ({
-          editing: state.columns.find((column) => column.id === id),
-        })),
-      removeEditing: () =>
-        set(() => ({
-          editing: undefined,
-        })),
-      reset: () => set({ columns: [] }),
-    }),
-    {
-      name: 'settings-storage', // nome da chave no localStorage
-      getStorage: () => localStorage, // define onde salvar
-    }
-  )
-);
+export const useSettingStore = create<SettingState>((set) => ({
+  ...initialState,
+
+  setMigrationSettings: (settings) => set({ migrationSettings: settings }),
+
+  updateMigrationSetting: (key, value) =>
+    set((state) => ({
+      migrationSettings: {
+        ...state.migrationSettings,
+        [key]: value,
+      },
+    })),
+
+  setLoading: (loading) => set({ isLoading: loading }),
+
+  setError: (error) => set({ error }),
+
+  reset: () => set(initialState),
+}));

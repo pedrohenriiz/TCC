@@ -95,6 +95,7 @@ class MigrationProjectOriginTableRepository:
                     name=col_data.name,
                     type=col_data.type,
                     is_pk=col_data.is_pk,
+                    is_natural_key=col_data.is_natural_key
                 )
                 self.db.add(new_col)
 
@@ -105,6 +106,7 @@ class MigrationProjectOriginTableRepository:
                 col.name = col_data.name
                 col.type = col_data.type
                 col.is_pk = col_data.is_pk
+                col.is_natural_key = col_data.is_natural_key
         
     def delete(self, migration_project_id: int, id: int):
         print("migration_project_id", migration_project_id)

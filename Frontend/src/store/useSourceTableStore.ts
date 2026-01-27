@@ -7,6 +7,7 @@ interface SourceTableColumnProps {
   name: string;
   type: string;
   is_pk: boolean;
+  is_natural_key: boolean;
   origin_table_id: number;
   created_at?: string;
   updated_at?: string;

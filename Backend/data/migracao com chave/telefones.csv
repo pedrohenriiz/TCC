@@ -1,3 +1,4 @@
-id,cliente_nome,telefone
-1,João Silva,5511999999999
-2,Maria Souza,11888888888
+pedido_id,cliente_nome,valor
+1,João Silva,150.00
+2,Maria Souza,200.00
+3,João Silva,300.00

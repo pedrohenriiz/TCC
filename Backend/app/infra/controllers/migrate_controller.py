@@ -4,14 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from infra.database.database import database
 from domain.services.mapping_service import MappingService
+from domain.services.setting_service import SettingService
 from pydantic import BaseModel
 
 teste = APIRouter(prefix="/migrate", tags=["Migration"])
 
 class MigrateRequest(BaseModel):
     migration_project_id: int
-    allow_duplicates: bool = False
-    duplicate_strategy: str = 'first'  # 'first' ou 'last'
 
 @teste.post("/")
 def migrate(
@@ -23,24 +22,6 @@ def migrate(
     
     **Parâmetros:**
     - `migration_project_id`: ID do projeto de migração
-    - `allow_duplicates`: Permite chaves naturais duplicadas (padrão: False)
-    - `duplicate_strategy`: Estratégia para duplicatas - 'first' (usa primeiro) ou 'last' (usa último)
-    
-    **Exemplo sem duplicatas (padrão):**
-    ```json
-    {
-        "migration_project_id": 1
-    }
-    ```
-    
-    **Exemplo permitindo duplicatas:**
-    ```json
-    {
-        "migration_project_id": 1,
-        "allow_duplicates": true,
-        "duplicate_strategy": "first"
-    }
-    ```
     
     **Comportamento:**
     - Com `allow_duplicates=False`: Erro se encontrar "João Silva" duplicado
@@ -48,18 +29,37 @@ def migrate(
     - Com `allow_duplicates=True, duplicate_strategy='last'`: Usa o último "João Silva" (ID 300)
     """
     try:
+        setting_service = SettingService(db)
+        
+        allow_duplicates_str = setting_service.get_effective_value(
+            key='allow_duplicates',
+            owner_type='global'
+        )
+        
+        duplicate_strategy = setting_service.get_effective_value(
+            key='duplicate_strategy',
+            owner_type='global'
+        )
+        
+        # Converter string para boolean
+        allow_duplicates = allow_duplicates_str.lower() == 'true'
+
         service = MappingService(db)
         
         result = service.get_by_migration_project(
             migration_project_id=request.migration_project_id,
-            allow_duplicates=request.allow_duplicates,
-            duplicate_strategy=request.duplicate_strategy
+            allow_duplicates=allow_duplicates,
+            duplicate_strategy=duplicate_strategy
         )
         
         return {
             "success": True,
             "message": "Migração executada com sucesso!",
-            "data": result
+            "data": result,
+            "settings_used": { 
+                "allow_duplicates": allow_duplicates,
+                "duplicate_strategy": duplicate_strategy
+            }
         }
         
     except ValueError as e:

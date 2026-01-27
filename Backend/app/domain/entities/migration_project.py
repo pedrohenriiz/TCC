@@ -69,6 +69,7 @@ class MigrationProjectOriginTableColumn(Base):
     name = Column(String(80), nullable=False)
     type = Column(String(14), nullable=False)
     is_pk = Column(Boolean, nullable=True)
+    is_natural_key = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

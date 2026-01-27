@@ -192,12 +192,35 @@ class MappingService:
         print(f"\n  FKs finais detectadas: {len(fk_mappings)} tabela(s)")
         return fk_mappings
     
-    def _register_primary_keys(self, mapped_rows_by_table: Dict[str, List[Dict]]):
+    # domain/services/mapping_service.py
+
+    def _register_primary_keys(self, mapped_rows_by_table: Dict[str, List[Dict]], raw_mappings):
         """
         Registra PKs E natural keys no contexto de migração.
+        Agora usa is_natural_key da coluna de origem.
         """
         print("\n🔑 REGISTRANDO CHAVES PRIMÁRIAS E NATURAIS:")
         
+        # Primeiro, cria um mapa de colunas naturais por tabela de destino
+        natural_keys_map = {}  # {destiny_table_id: {destiny_column_name: origin_column}}
+        
+        for mapping in raw_mappings:
+            for mapping_column in mapping.columns:
+                # Verifica se a coluna de ORIGEM está marcada como natural_key
+                if mapping_column.origin_column.is_natural_key:
+                    destiny_table_id = mapping_column.destiny_table_id
+                    destiny_column_name = mapping_column.destiny_column.name
+                    
+                    if destiny_table_id not in natural_keys_map:
+                        natural_keys_map[destiny_table_id] = {}
+                    
+                    natural_keys_map[destiny_table_id][destiny_column_name] = mapping_column.origin_column
+                    
+                    print(f"  🔍 Natural Key detectada:")
+                    print(f"     {mapping_column.origin_table.name}.{mapping_column.origin_column.name} (origem)")
+                    print(f"     → {mapping_column.destiny_table.name}.{destiny_column_name} (destino)")
+        
+        # Agora registra as chaves
         for destiny_table_id, rows in mapped_rows_by_table.items():
             if not rows:
                 continue
@@ -211,6 +234,9 @@ class MappingService:
                 print(f"  ⚠️ Sem PK definida!")
                 continue
             
+            # Pega as colunas naturais desta tabela
+            natural_keys_columns = natural_keys_map.get(destiny_table_id, {})
+            
             # Registra cada linha
             for row in rows:
                 if pk_column not in row:
@@ -218,29 +244,27 @@ class MappingService:
                     
                 pk_value = row[pk_column]
                 
-                # Registra pela PK
+                # 1. Registra pela PK
                 self.context.register(
                     entity=table.name,
                     natural_key=str(pk_value),
                     destination_id=int(pk_value)
                 )
-                print(f"    📝 {table.name}['{pk_value}'] = {pk_value}")
+                print(f"    📝 PK: {table.name}['{pk_value}'] = {pk_value}")
                 
-                # Registra por TODAS as outras colunas (natural keys)
-                for col_name, col_value in row.items():
-                    if col_name == pk_column or not col_value:
-                        continue
-                    
-                    # Registra string values como natural keys
-                    if isinstance(col_value, str) and not col_value.isdigit():
+                # 2. Registra pelas Natural Keys configuradas
+                for col_name in natural_keys_columns.keys():
+                    if col_name in row and row[col_name]:
+                        col_value = row[col_name]
                         self.context.register(
                             entity=table.name,
                             natural_key=str(col_value),
                             destination_id=int(pk_value)
                         )
-                        print(f"    📝 {table.name}['{col_value}'] = {pk_value}")
+                        print(f"    🔑 Natural Key: {table.name}['{col_value}'] = {pk_value}")
                         
-            print(f"  ✅ Total: {len(rows)} registros")
+            total_natural_keys = len(natural_keys_columns)
+            print(f"  ✅ Total: {len(rows)} registros ({total_natural_keys} natural key(s) configurada(s))")
     
     def _resolve_foreign_keys(self, mapped_rows_by_table: Dict[str, List[Dict]], 
                         fk_mappings: Dict[int, List[Dict]],
@@ -461,7 +485,7 @@ class MappingService:
 
         # 4️⃣ Registrar PKs de TODAS as tabelas (AGORA com valores já transformados)
         try:
-            self._register_primary_keys(mapped_rows_by_table)
+            self._register_primary_keys(mapped_rows_by_table, raw_mappings)
         except ValueError as e:
             # Duplicata detectada em modo estrito
             print(f"\n❌ ERRO: {e}")

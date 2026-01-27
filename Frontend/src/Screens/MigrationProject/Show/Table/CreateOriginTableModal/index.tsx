@@ -75,8 +75,9 @@ export default function TableModal({
             id: col.id,
             name: col.name,
             type: col.type,
+            is_natural_key: col.is_natural_key,
           }))
-        : [{ id: 1, name: '', type: 'text' }],
+        : [{ id: 1, name: '', type: 'text', is_natural_key: false }],
       is_pk: table ? table.columns.find((c) => c.is_pk)?.id || '' : '',
     },
     validationSchema,
@@ -110,10 +111,9 @@ export default function TableModal({
         name: col.name.trim(),
         type: col.type,
         is_pk: col.id === is_pk,
+        is_natural_key: col.is_natural_key,
         origin_table_id: table?.id as number,
       }));
-
-      console.log('formattedColumns', formattedColumns);
 
       if (isEditMode && table) {
         update.mutate({
@@ -226,7 +226,10 @@ export default function TableModal({
                       Tipo
                     </th>
                     <th className='px-4 py-3 text-center font-semibold text-gray-700 w-[15%]'>
-                      PK
+                      Chave Primária
+                    </th>
+                    <th className='px-4 py-3 text-center font-semibold text-gray-700 w-[15%]'>
+                      Chave Natural
                     </th>
                     <th className='px-4 py-3 text-center font-semibold text-gray-700 w-[15%]'>
                       Ações
@@ -293,6 +296,25 @@ export default function TableModal({
                           }
                           className='w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer'
                           title='Definir como Primary Key'
+                        />
+                      </td>
+
+                      <td className='px-4 py-3 text-center'>
+                        <input
+                          type='checkbox'
+                          name='is_natural_key'
+                          checked={column.is_natural_key}
+                          onChange={() => {
+                            const newColumns = [...formik.values.columns];
+                            const index = newColumns.findIndex(
+                              (c) => c.id === column.id
+                            );
+                            newColumns[index].is_natural_key =
+                              !newColumns[index].is_natural_key;
+                            formik.setFieldValue('columns', newColumns);
+                          }}
+                          className='w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer'
+                          title='Definir como chave natural'
                         />
                       </td>
 

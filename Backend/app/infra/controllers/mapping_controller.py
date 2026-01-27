@@ -5,20 +5,19 @@ from infra.database.database import database
 from interfaces.schemas.mapping_schema import (
     MappingCreate,
     MappingUpdate,
-    MappingRead  # ← ADICIONAR APENAS ISSO
+    MappingRead
 )
 
 mapping_router = APIRouter(prefix="/migration-project/{migration_project_id}/mappings", tags=["Mappings"])
 
-@mapping_router.post("/", response_model=MappingRead)  # ← ADICIONAR response_model
+@mapping_router.post("/", response_model=MappingRead)
 def create_mapping(request: MappingCreate, db: Session=Depends(database)):
     service = MappingService(db)
-    print("request", request)
     mapping = service.create_mapping(request)
 
     return mapping
 
-@mapping_router.get("/")  # ← ADICIONAR response_model
+@mapping_router.get("/")
 def list_mapping(migration_project_id:int, db: Session = Depends(database)):
     print("Esse cara aqui 22", migration_project_id)
     service = MappingService(db)

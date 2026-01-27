@@ -9,7 +9,6 @@ class MigrationHelpers:
         normalized = []
 
         for mapping in raw_mappings:
-            print(mapping)
             for col in mapping.columns:
                 normalized.append({
                     "migration_project": {
@@ -91,8 +90,8 @@ class MigrationHelpers:
 
             # 2️⃣ ler o CSV e mapear colunas
             rows = []
-            with open(csv_path, newline="", encoding="utf-8") as csvfile:
-                reader = csv.DictReader(csvfile)
+            with open(csv_path, newline="", encoding="latin-1") as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=",")
 
                 for row in reader:
                     mapped_row = {

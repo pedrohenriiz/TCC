@@ -8,6 +8,7 @@ from infra.controllers.migration_project_controller import migration_project_rou
 from infra.controllers.migration_project_origin_table_controller import migration_project_origin_table_router
 from infra.controllers.transformation_controller import transformation_router
 from infra.controllers.mapping_controller import mapping_router
+from infra.controllers.setting_controller import router as setting_router
 from infra.database.connection import Base, engine
 
 import logging
@@ -31,3 +32,4 @@ app.include_router(migration_project_router)
 app.include_router(migration_project_origin_table_router)
 app.include_router(transformation_router)
 app.include_router(mapping_router)
+app.include_router(setting_router)
