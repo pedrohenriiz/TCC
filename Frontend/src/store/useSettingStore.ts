@@ -1,10 +1,9 @@
-// store/useSettingStore.ts
-
 import { create } from 'zustand';
 
 type MigrationSettings = {
   allow_duplicates: string;
   duplicate_strategy: string;
+  error_strategy: string;
 };
 
 type SettingState = {
@@ -24,6 +23,7 @@ const initialState = {
   migrationSettings: {
     allow_duplicates: 'false',
     duplicate_strategy: 'first',
+    error_strategy: 'validate_all',
   },
   isLoading: false,
   error: null,

@@ -23,7 +23,7 @@ export default function Layout() {
   ];
 
   return (
-    <div className='flex h-screen bg-gray-100'>
+    <div className='flex h-screen bg-gray-50 overflow-hidden'>
       {/* Sidebar */}
       <aside className='w-60 text-white flex flex-col bg-main'>
         <div className='px-6 py-4 text-lg font-bold border-b border-tertiary'>
@@ -46,7 +46,7 @@ export default function Layout() {
       </aside>
 
       {/* Área principal */}
-      <div className='flex-1 flex flex-col'>
+      <div className='flex-1 flex flex-col overflow-hidden'>
         <div className='py-6 bg-white'></div>
         {/* Conteúdo da rota */}
         <main className='flex-1 p-6 overflow-auto'>

@@ -27,6 +27,16 @@ const SETTINGS_CONFIG = [
       { value: 'all', label: 'Todos' },
     ],
   },
+  {
+    id: 'error_strategy',
+    label: 'Estratégia de Erros',
+    description: 'Define como o sistema se comporta ao encontrar erros',
+    options: [
+      { value: 'validate_all', label: 'Validar Todos os Dados' },
+      { value: 'abort_on_first', label: 'Parar no Primeiro Erro' },
+      { value: 'skip_invalid', label: 'Ignorar Linhas Inválidas' },
+    ],
+  },
 ];
 
 export default function MigrationSettingsTab() {
@@ -38,6 +48,8 @@ export default function MigrationSettingsTab() {
     initialValues: migrationSettings,
     enableReinitialize: true,
     onSubmit: (values) => {
+      console.log(values);
+
       updateMutation.mutate({ settings: values });
     },
   });

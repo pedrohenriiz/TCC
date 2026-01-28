@@ -274,7 +274,20 @@ class SettingRepository:
                 "description": "Estratégia para resolver duplicatas",
                 "allowed_values": json.dumps(["first", "last", "all"]),
                 "display_order": 2
-            }
+            },
+            {
+                "key": "error_strategy",
+                "default_value": "abort_on_first",
+                "data_type": "string",
+                "category": "migration",
+                "description": "Estratégia de tratamento de erros durante migração",
+                "allowed_values": json.dumps([
+                    "abort_on_first",
+                    "validate_all", 
+                    "skip_invalid"
+                ]),
+                "display_order": 3
+            },
         ]
         
         for def_data in definitions:

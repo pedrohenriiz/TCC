@@ -1,5 +1,3 @@
-// hooks/settings/useSettingsQuery.ts
-
 import { useQuery } from '@tanstack/react-query';
 import { getSettings } from '../../services/settings/getSettings';
 import { useSettingStore } from '../../store/useSettingStore';
@@ -17,14 +15,18 @@ export function useSettingsList(category?: string) {
   // Atualiza a store quando os dados chegam
   useEffect(() => {
     if (query.data) {
-      const settingsMap = query.data.reduce((acc, setting) => {
-        acc[setting.key] = setting.value;
-        return acc;
-      }, {} as Record<string, string>);
+      const settingsMap = query.data.reduce(
+        (acc, setting) => {
+          acc[setting.key] = setting.value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
       setMigrationSettings({
         allow_duplicates: settingsMap.allow_duplicates || 'false',
         duplicate_strategy: settingsMap.duplicate_strategy || 'first',
+        error_strategy: settingsMap.error_strategy || 'validate_all',
       });
     }
 
