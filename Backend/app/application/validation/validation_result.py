@@ -1,4 +1,5 @@
 # application/validation/validation_result.py
+# VERSÃO CORRIGIDA
 
 from dataclasses import dataclass
 from typing import List, Dict, Any
@@ -120,7 +121,6 @@ class ValidationResult:
         self.invalid_rows += 1
     
     def print_summary(self):
-
         print("\n" + "="*60)
         print("📊 RESUMO DA VALIDAÇÃO")
         print("="*60)
@@ -138,3 +138,30 @@ class ValidationResult:
             
             if len(self.errors) > 10:
                 print(f"\n... e mais {len(self.errors) - 10} erro(s)")
+
+    def merge(self, other: 'ValidationResult'):
+        """
+        Merge outro resultado de validação neste
+        
+        Args:
+            other: Outro ValidationResult para fazer merge
+        """
+        self.total_rows += other.total_rows
+        self.valid_rows += other.valid_rows
+        self.errors.extend(other.errors)
+        
+        # Recalcula métricas
+        self._update_metrics()
+
+    def _update_metrics(self):
+        """
+        Atualiza métricas calculadas
+        
+        NOTA: 
+        - error_count é calculado dinamicamente via len(self.errors) em to_dict()
+        - has_errors é uma @property que verifica len(self.errors) > 0
+        - success_rate é uma @property que calcula (valid_rows/total_rows)*100
+        
+        Portanto, só precisamos atualizar invalid_rows aqui.
+        """
+        self.invalid_rows = self.total_rows - self.valid_rows

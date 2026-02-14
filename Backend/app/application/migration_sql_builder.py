@@ -17,13 +17,8 @@ class MigrationSQLBuilder:
         for row in rows:
             values = []
             for value in row.values():
-                if value is None:
-                    values.append("NULL")
-                elif isinstance(value, (int, float)):
-                    values.append(str(value))
-                else:
-                    escaped = str(value).replace("'", "''")
-                    values.append(f"'{escaped}'")
+                # ✨ USA NOVA FUNÇÃO
+                values.append(self._format_sql_value(value))
 
             values_sql.append(f"({', '.join(values)})")
 
@@ -35,3 +30,65 @@ class MigrationSQLBuilder:
         )
 
         return sql
+    
+    def _format_sql_value(self, value) -> str:
+        """
+        Formata valor para SQL baseado no tipo
+        
+        LÓGICA:
+        1. NULL → NULL
+        2. Boolean Python (True/False) → TRUE/FALSE
+        3. String "true"/"false" → TRUE/FALSE
+        4. Número Python (int, float) → sem aspas
+        5. String numérica ("25", "25.5") → sem aspas
+        6. String normal ("João") → com aspas
+        """
+        
+        # 1. NULL
+        if value is None or value == '':
+            return 'NULL'
+        
+        # 2. Boolean Python
+        if isinstance(value, bool):
+            return 'TRUE' if value else 'FALSE'
+        
+        # 3. String "true"/"false" do CSV
+        if isinstance(value, str) and value.lower() in ['true', 'false']:
+            return 'TRUE' if value.lower() == 'true' else 'FALSE'
+        
+        # 4. Número Python (int, float) - NÃO boolean!
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return str(value)
+        
+        # 5. String numérica do CSV (ex: "25", "25.5")
+        if isinstance(value, str):
+            cleaned = value.strip()
+            
+            # Tenta detectar se é número
+            if self._is_numeric(cleaned):
+                return cleaned  # Retorna SEM aspas
+        
+        # 6. String normal (precisa de aspas e escape)
+        if isinstance(value, str):
+            escaped = value.replace("'", "''")
+            return f"'{escaped}'"
+        
+        # Fallback
+        return f"'{str(value)}'"
+    
+    def _is_numeric(self, value: str) -> bool:
+        """
+        Verifica se string é numérica
+        
+        Exemplos:
+            "25" → True
+            "25.5" → True
+            "-10" → True
+            "25 anos" → False
+            "abc" → False
+        """
+        try:
+            float(value)
+            return True
+        except (ValueError, TypeError):
+            return False
