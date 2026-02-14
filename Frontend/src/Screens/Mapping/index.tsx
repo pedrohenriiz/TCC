@@ -12,12 +12,16 @@ import PagetTitle from '../../components/PageTitle';
 import CustomHeader from '../../components/CustomHeader';
 import type { MappingDataProps } from './types';
 import ConfirmButton from '../../components/ConfirmButton';
-import { createMigration } from '../../services/migration/createMigration';
+import { useMigrationCreate } from '../../hooks/migrations/useMigrationCreate';
+import { MigrationResult } from './MigrationResponse';
 
 export default function MappingPageLayout() {
   const { id } = useParams<{ id: string }>();
   const [openModal, setOpenModal] = useState(false);
   const [editingRow, setEditingRow] = useState<MappingDataProps | null>(null);
+
+  // ✨ Hook do React Query para migração
+  const { mutate: createMigration, isPending: isMigrating } = useMigrationCreate();
 
   const { data } = useQuery({
     queryKey: ['mappings', id],
@@ -60,9 +64,16 @@ export default function MappingPageLayout() {
   function handleOpenModal() {
     setOpenModal(true);
   }
+  
   function handleOpenEditMapping(mapping?: MappingDataProps | null = null) {
     setEditingRow(mapping);
     setOpenModal(true);
+  }
+
+  // ✨ Handler para iniciar migração
+  function handleStartMigration() {
+    if (!id) return;
+    createMigration({ migration_project_id: id });
   }
 
   const cardHeaderData = [
@@ -114,22 +125,28 @@ export default function MappingPageLayout() {
           onOpenEditing={handleOpenEditMapping}
         />
 
-        <ConfirmButton
-          Icon={<Send className='w-4 h-4' />}
-          iconPosition='left'
-          text='Iniciar migração'
-          onClick={async () => {
-            if (id) createMigration({ migration_project_id: id });
-          }}
-        />
+        {/* Botões de ação */}
+        <div className='flex gap-4 mt-6'>
+          <ConfirmButton
+            Icon={<Send className='w-4 h-4' />}
+            iconPosition='left'
+            text={isMigrating ? 'Migrando...' : 'Iniciar migração'}
+            onClick={handleStartMigration}
+            disabled={isMigrating}
+          />
 
-        <ConfirmButton
-          Icon={<Plus className='w-4 h-4' />}
-          iconPosition='left'
-          text='Criar Primeiro Mapeamento'
-          onClick={() => handleOpenEditMapping()}
-        />
+          <ConfirmButton
+            Icon={<Plus className='w-4 h-4' />}
+            iconPosition='left'
+            text='Criar Primeiro Mapeamento'
+            onClick={() => handleOpenEditMapping()}
+          />
+        </div>
 
+        {/* ✨ NOVO: Componente de Resultado da Migração */}
+        <MigrationResult />
+
+        {/* Modal de criação/edição */}
         {openModal && (
           <CreateMappingModal
             isOpen={openModal}

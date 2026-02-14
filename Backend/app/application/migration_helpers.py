@@ -90,7 +90,7 @@ class MigrationHelpers:
 
             # 2️⃣ ler o CSV e mapear colunas
             rows = []
-            with open(csv_path, newline="", encoding="latin-1") as csvfile:
+            with open(csv_path, newline="", encoding="utf-8") as csvfile:
                 reader = csv.DictReader(csvfile, delimiter=",")
 
                 for row in reader:

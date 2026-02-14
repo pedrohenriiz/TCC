@@ -9,6 +9,12 @@ from application.migration_context import MigrationContext
 from application.natural_key_resolver import NaturalKeyResolver
 from application.use_cases.transformation_processor import TransformationProcessor
 from typing import Dict, List, Any, Optional
+from collections import defaultdict, deque
+from application.validation.validation_result import ValidationResult
+from application.validation.validation_error import ValidationError
+
+from domain.enum.error_strategy import ErrorStrategy
+from domain.repositories.setting_repository import SettingRepository
 
 class MappingService:
     def __init__(self, db: Session):
@@ -16,6 +22,7 @@ class MappingService:
         self.table_config = TableConfigRepository(db)
         self.context = MigrationContext()
         self.transformation_processor = TransformationProcessor(db)
+        self.setting_repo = SettingRepository(db)
         
     def create_mapping(self, request: MappingCreate):
         return self.repo.create(request)
@@ -32,6 +39,256 @@ class MappingService:
     def update_mapping(self, mapping_id: int, data: MappingUpdate):
         print("Estou no service do update")
         return self.repo.update(mapping_id, data)
+    
+    def _get_dependency_order(self, mapped_rows_by_table: Dict[str, List[Dict]], 
+                            fk_mappings: Dict[int, List[Dict]]) -> List[int]:
+        """
+        Ordena tabelas por dependência: pais primeiro, filhos depois.
+        
+        Exemplo:
+            customers (sem FK) → processa primeiro
+            orders (FK para customers) → processa depois
+            order_items (FK para orders) → processa por último
+        
+        Args:
+            mapped_rows_by_table: Dados por tabela {table_id: [rows]}
+            fk_mappings: FKs por tabela {table_id: [fk_configs]}
+        
+        Returns:
+            Lista de table_ids em ordem de dependência
+            Ex: [6, 9, 12] (customers, orders, order_items)
+        """
+        
+        
+        # Mapa de dependências: table_id → [tables que ela depende]
+        dependencies = defaultdict(list)
+        
+        # Mapa de tabelas → nome (para debug)
+        table_names = {}
+        
+        # Identifica dependências baseado nas FKs
+        for table_id in mapped_rows_by_table.keys():
+            table = self.table_config.get_by_id(int(table_id))
+            table_names[table_id] = table.name
+            
+            # Se tabela tem FKs, ela depende de outras tabelas
+            if table_id in fk_mappings:
+                for fk_config in fk_mappings[table_id]:
+                    reference_entity = fk_config['reference_entity']
+                    
+                    # Encontra o table_id da tabela referenciada
+                    for ref_table_id in mapped_rows_by_table.keys():
+                        ref_table = self.table_config.get_by_id(int(ref_table_id))
+                        if ref_table.name == reference_entity:
+                            # table_id DEPENDE de ref_table_id
+                            dependencies[table_id].append(ref_table_id)
+                            break
+        
+        # Ordenação topológica (algoritmo de Kahn)
+        # Conta quantas dependências cada tabela tem
+        in_degree = {table_id: 0 for table_id in mapped_rows_by_table.keys()}
+        
+        for table_id, deps in dependencies.items():
+            in_degree[table_id] = len(deps)
+        
+        # Fila com tabelas sem dependências (pais)
+        queue = deque([table_id for table_id, degree in in_degree.items() if degree == 0])
+        ordered = []
+        
+        while queue:
+            current = queue.popleft()
+            ordered.append(current)
+            
+            # Remove current das dependências de outras tabelas
+            for table_id, deps in dependencies.items():
+                if current in deps:
+                    in_degree[table_id] -= 1
+                    if in_degree[table_id] == 0:
+                        queue.append(table_id)
+        
+        # Verifica se há ciclo (não deveria acontecer)
+        if len(ordered) != len(mapped_rows_by_table):
+            print("⚠️ AVISO: Detectado possível dependência circular!")
+            print(f"   Tabelas ordenadas: {len(ordered)}")
+            print(f"   Total de tabelas: {len(mapped_rows_by_table)}")
+            # Adiciona tabelas restantes no final
+            for table_id in mapped_rows_by_table.keys():
+                if table_id not in ordered:
+                    ordered.append(table_id)
+        
+        # Debug: mostra ordem
+        print("\n📋 ORDEM DE PROCESSAMENTO DAS TABELAS:")
+        for idx, table_id in enumerate(ordered, 1):
+            table_name = table_names.get(table_id, f"ID={table_id}")
+            deps = dependencies.get(table_id, [])
+            deps_names = [table_names.get(d, f"ID={d}") for d in deps]
+            
+            if deps_names:
+                print(f"   {idx}. {table_name} (depende de: {', '.join(deps_names)})")
+            else:
+                print(f"   {idx}. {table_name} (sem dependências)")
+        
+        return ordered
+    
+
+    def _validate_and_filter(
+        self,
+        mapped_rows_by_table: Dict[str, List[Dict]],
+        fk_mappings: Dict[int, List[Dict]],
+        raw_mappings,
+        error_strategy: 'ErrorStrategy',
+    ) -> tuple:
+        """
+        Valida dados transformados e filtra linhas válidas.
+        
+        NOVO FLUXO SIMPLIFICADO:
+        1. Registra TODAS as PKs e natural keys (para o contexto ficar pronto)
+        2. Valida FKs (agora pode verificar se natural keys existem)
+        3. Filtra linhas válidas
+        """
+        
+        print("\n🔍 INICIANDO VALIDAÇÃO...")
+        
+        result = ValidationResult()
+        filtered_rows = {}
+        
+        # Ordena tabelas por dependência (pais primeiro)
+        ordered_table_ids = self._get_dependency_order(mapped_rows_by_table, fk_mappings)
+        
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # ETAPA 1: REGISTRAR TODAS AS PKs E NATURAL KEYS
+        # (Isso prepara o contexto para validação)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        print("\n🔑 REGISTRANDO PKs E NATURAL KEYS...")
+        self._register_primary_keys(mapped_rows_by_table, raw_mappings)
+        print("   ✅ Contexto preparado para validação")
+        
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # ETAPA 2: VALIDAR FKs (agora que contexto está pronto)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        print("\n🔍 VALIDANDO FKs...")
+        
+        for table_id in ordered_table_ids:
+            rows = mapped_rows_by_table.get(table_id, [])
+            if not rows:
+                filtered_rows[table_id] = []
+                continue
+            
+            table = self.table_config.get_by_id(int(table_id))
+            fk_configs = fk_mappings.get(table_id, [])
+            
+            if not fk_configs:
+                # Tabela sem FKs - todas as linhas são válidas
+                print(f"  ✅ {table.name}: sem FKs, {len(rows)} linhas válidas")
+                filtered_rows[table_id] = rows
+                result.total_rows += len(rows)
+                result.valid_rows += len(rows)
+                continue
+            
+            print(f"  📋 Validando {table.name} ({len(rows)} linhas, {len(fk_configs)} FK(s))...")
+            
+            valid_rows = []
+            
+            for row_index, row in enumerate(rows):
+                result.total_rows += 1
+                has_error = False
+                
+                # Valida cada FK da linha
+                for fk_config in fk_configs:
+                    source_column = fk_config['source_column']
+                    reference_entity = fk_config['reference_entity']
+                    
+                    # Pega o valor da FK
+                    if source_column not in row:
+                        continue
+                    
+                    fk_value = row[source_column]
+                    
+                    # Pula se NULL/vazio
+                    if fk_value is None or fk_value == '':
+                        continue
+                    
+                    # ✨ TENTA RESOLVER A NATURAL KEY
+                    try:
+                        resolved_id = self.context.resolve(
+                            entity=reference_entity,
+                            natural_key=str(fk_value)
+                        )
+                        
+                        # Se retornou None, não encontrou
+                        if resolved_id is None:
+                            error = ValidationError(
+                                row_index=row_index,
+                                table=table.name,
+                                column=source_column,
+                                error_type="natural_key_not_found",
+                                message=f"Chave natural '{fk_value}' não encontrada em {reference_entity}",
+                                value=fk_value,
+                                severity="error",
+                                related_error=f"O valor '{fk_value}' não existe na tabela {reference_entity}"
+                            )
+                            
+                            result.add_error(error)
+                            has_error = True
+                            
+                            print(f"    ❌ Linha {row_index}: '{fk_value}' não encontrado em {reference_entity}")
+                            
+                            # ABORT_ON_FIRST: para imediatamente
+                            if error_strategy == ErrorStrategy.ABORT_ON_FIRST:
+                                print(f"\n❌ ABORTANDO (estratégia: abort_on_first)")
+                                return result, {}
+                            
+                            break  # Pula para próxima linha
+                        
+                    except Exception as e:
+                        # Erro ao resolver
+                        error = ValidationError(
+                            row_index=row_index,
+                            table=table.name,
+                            column=source_column,
+                            error_type="resolution_error",
+                            message=f"Erro ao resolver FK: {str(e)}",
+                            value=fk_value,
+                            severity="error"
+                        )
+                        
+                        result.add_error(error)
+                        has_error = True
+                        
+                        print(f"    ❌ Linha {row_index}: erro ao resolver '{fk_value}'")
+                        
+                        if error_strategy == ErrorStrategy.ABORT_ON_FIRST:
+                            print(f"\n❌ ABORTANDO (estratégia: abort_on_first)")
+                            return result, {}
+                        
+                        break
+                
+                # Se não teve erro, linha é válida
+                if not has_error:
+                    valid_rows.append(row)
+                    result.valid_rows += 1
+            
+            filtered_rows[table_id] = valid_rows
+            
+            invalid_count = len(rows) - len(valid_rows)
+            if invalid_count > 0:
+                print(f"    ✅ {len(valid_rows)} válidas, ❌ {invalid_count} inválidas")
+            else:
+                print(f"    ✅ Todas as {len(valid_rows)} linhas válidas")
+        
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # RESUMO
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        print("\n" + "="*60)
+        print("📊 RESUMO DA VALIDAÇÃO")
+        print("="*60)
+        print(f"Total de linhas: {result.total_rows}")
+        print(f"✅ Válidas: {result.valid_rows} ({result.success_rate:.1f}%)")
+        print(f"❌ Inválidas: {result.invalid_rows}")
+        print(f"Total de erros: {len(result.errors)}")
+        print("="*60)
+        
+        return result, filtered_rows
     
     def _get_pk_column(self, table) -> Optional[str]:
         """
@@ -191,8 +448,6 @@ class MappingService:
         
         print(f"\n  FKs finais detectadas: {len(fk_mappings)} tabela(s)")
         return fk_mappings
-    
-    # domain/services/mapping_service.py
 
     def _register_primary_keys(self, mapped_rows_by_table: Dict[str, List[Dict]], raw_mappings):
         """
@@ -430,6 +685,18 @@ class MappingService:
                     
                     print(f"    ✓ {column_name}: '{original_value}' → '{transformed_value}'")
 
+    def _get_status_message(self, status: str, validation_result) -> str:
+        """Gera mensagem descritiva baseada no status"""
+        messages = {
+            "success": "Migração executada com sucesso!",
+            "completed_with_errors": f"Migração concluída com {len(validation_result.errors)} erro(s). Algumas linhas foram puladas.",
+            "validation_passed": "Validação concluída: todos os dados são válidos.",
+            "validation_failed": f"Validação falhou: {len(validation_result.errors)} erro(s) encontrado(s).",
+            "aborted": "Migração abortada devido a erro na validação.",
+            "error": "Erro durante a migração."
+        }
+        return messages.get(status, "Status desconhecido")
+    
     def get_by_migration_project(
         self, 
         migration_project_id: int,
@@ -443,6 +710,12 @@ class MappingService:
             duplicate_strategy: Estratégia para resolver duplicatas ('first', 'last')
         """
         # Cria o contexto com as configurações
+        error_strategy_value = self.setting_repo.get_effective_value(
+            key='error_strategy',
+            owner_type='global'
+        )
+        error_strategy = ErrorStrategy(error_strategy_value or 'abort_on_first')
+
         self.context = MigrationContext(
             allow_duplicates=allow_duplicates,
             duplicate_strategy=duplicate_strategy
@@ -483,50 +756,98 @@ class MappingService:
         # ✨ APLICAR TRANSFORMAÇÕES ANTES DE REGISTRAR PKs
         self._apply_transformations(mapped_rows_by_table, raw_mappings)
 
+        validation_result, filtered_rows = self._validate_and_filter(
+            mapped_rows_by_table=mapped_rows_by_table,
+            fk_mappings=fk_mappings,
+            raw_mappings=raw_mappings,
+            error_strategy=error_strategy,
+        )
+
+        if error_strategy == ErrorStrategy.ABORT_ON_FIRST and validation_result.has_errors:
+            print("\n❌ MIGRAÇÃO ABORTADA (estratégia: abort_on_first)")
+            return {
+                "status": "aborted",
+                "message": "Migração abortada: erro encontrado na validação",
+                "migration_project_id": migration_project_id,
+                "error_strategy": error_strategy.value,
+                "validation": validation_result.to_dict(),
+                "sql_file": None
+            }
+
+
         # 4️⃣ Registrar PKs de TODAS as tabelas (AGORA com valores já transformados)
         try:
-            self._register_primary_keys(mapped_rows_by_table, raw_mappings)
+            self._register_primary_keys(filtered_rows, raw_mappings)
         except ValueError as e:
             # Duplicata detectada em modo estrito
             print(f"\n❌ ERRO: {e}")
             print("\n💡 Dica: Use 'allow_duplicates=True' para permitir duplicatas")
-            raise
+            
+            return {
+                "status": "error",
+                "message": str(e),
+                "migration_project_id": migration_project_id,
+                "validation": validation_result.to_dict(),
+                "sql_file": None
+            }
 
         # 5️⃣ Verificar se houve duplicatas
         if self.context.has_duplicates():
             self.context.print_duplicate_report()
 
         # 6️⃣ Resolver FKs usando os mapeamentos explícitos
-        self._resolve_foreign_keys(mapped_rows_by_table, fk_mappings, raw_mappings)
+        self._resolve_foreign_keys(filtered_rows, fk_mappings, raw_mappings)
 
         # 7️⃣ Gerar SQL
-        sql_builder = MigrationSQLBuilder()
-        file_builder = MigrationSQLFileBuilder("/app/sql_output")
-        sql_blocks = []
+        sql_file = None
 
-        for destiny_table_id, rows in mapped_rows_by_table.items():
-            table = self.table_config.get_by_id(int(destiny_table_id))
-            sql = sql_builder.build_insert_sql(
-                table_name=table.name,
-                rows=rows
+        if error_strategy != ErrorStrategy.VALIDATE_ALL:
+            sql_builder = MigrationSQLBuilder()
+            file_builder = MigrationSQLFileBuilder("/app/sql_output")
+            sql_blocks = []
+            
+            for destiny_table_id, rows in filtered_rows.items():
+                table = self.table_config.get_by_id(int(destiny_table_id))
+                sql = sql_builder.build_insert_sql(
+                    table_name=table.name,
+                    rows=rows
+                )
+                if sql:
+                    sql_blocks.append(sql)
+            
+            # Escrever arquivo
+            sql_file = file_builder.write(
+                migration_project_name=migration_project.name,
+                sql_blocks=sql_blocks
             )
-            if sql:
-                sql_blocks.append(sql)
-
-        # 8️⃣ Escrever arquivo
-        file_path = file_builder.write(
-            migration_project_name=migration_project.name,
-            sql_blocks=sql_blocks
-        )
+            
+            print(f"\n📄 SQL gerado: {sql_file}")
+        else:
+            print(f"\n📄 SQL NÃO gerado (estratégia: validate_all - modo validação)")
 
         # 9️⃣ Estatísticas
         stats = self.context.get_stats()
 
+        if error_strategy == ErrorStrategy.VALIDATE_ALL:
+            if validation_result.has_errors:
+                status = "validation_failed"
+            else:
+                status = "validation_passed"
+        else:
+            if validation_result.has_errors:
+                status = "completed_with_errors"
+            else:
+                status = "success"
+
         return {
+            "status": status,
+            "message": self._get_status_message(status, validation_result),
             "migration_project_id": migration_project_id,
-            "sql_file": str(file_path),
-            "tables": list(mapped_rows_by_table.keys()),
-            "total_tables": len(mapped_rows_by_table),
+            "error_strategy": error_strategy.value,
+            "sql_file": str(sql_file) if sql_file else None,
+            "validation": validation_result.to_dict(),
             "duplicate_warnings": len(self.context.get_duplicate_warnings()),
             "stats": stats
         }
+    
+    
