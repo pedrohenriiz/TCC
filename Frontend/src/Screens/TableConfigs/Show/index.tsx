@@ -15,6 +15,7 @@ import TableConfigForm from './TableConfigForm';
 import TableConfigColumnsForm from './TableConfigColumnsForm';
 import type { ColumnProps } from './types';
 import AddColumnsHeader from './AddColumnsHeader';
+import { tableConfigValidationSchema } from './validationSchema';
 
 interface OnSubmitFormProps {
   name: string;
@@ -29,7 +30,7 @@ export default function TableConfigsShow() {
   const update = useTableConfigUpdate();
 
   const formikRef = useRef<FormikProps<OnSubmitFormProps>>(
-    {} as FormikProps<OnSubmitFormProps>
+    {} as FormikProps<OnSubmitFormProps>,
   );
 
   const { data, isLoading } = useQuery({
@@ -77,13 +78,17 @@ export default function TableConfigsShow() {
       columns: payload,
     };
 
-    if (id === 'new') {
-      create.mutate(formattedData);
-    } else {
-      await update.mutateAsync({
-        id: Number(id),
-        data: formattedData,
-      });
+    try {
+      if (id === 'new') {
+        create.mutate(formattedData);
+      } else {
+        await update.mutateAsync({
+          id: Number(id),
+          data: formattedData,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar:', error);
     }
   }
 
@@ -108,6 +113,8 @@ export default function TableConfigsShow() {
           <Formik
             initialValues={initialValues}
             enableReinitialize
+            validationSchema={tableConfigValidationSchema}
+            validateOnBlur={true}
             onSubmit={onSubmit}
             innerRef={formikRef}
           >
