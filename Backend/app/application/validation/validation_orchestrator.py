@@ -5,6 +5,7 @@ from application.validation.validation_result import ValidationResult
 from application.validation.validation_error import ValidationError
 from application.validation.fk_validator import ForeignKeyValidator
 from application.validation.type_validator import TypeValidator
+from application.validation.not_null_validator import NotNullValidator  # ✨ NOVO
 from application.migration_context import MigrationContext
 from domain.enum.error_strategy import ErrorStrategy
 
@@ -17,6 +18,7 @@ class ValidationOrchestrator:
         self.context = context
         self.fk_validator = ForeignKeyValidator(context)
         self.type_validator = TypeValidator()
+        self.not_null_validator = NotNullValidator()  # ✨ NOVO
     
     def validate_all(
         self,
@@ -53,7 +55,19 @@ class ValidationOrchestrator:
             row_errors = []
             
             # ========================================
-            # VALIDAÇÃO 1: Foreign Keys
+            # VALIDAÇÃO 1: NOT NULL
+            # ========================================
+            if column_configs:
+                not_null_errors = self.not_null_validator.validate_row(
+                    row=row,
+                    row_index=row_index,
+                    table_name=table_name,
+                    column_configs=column_configs
+                )
+                row_errors.extend(not_null_errors)
+            
+            # ========================================
+            # VALIDAÇÃO 2: Foreign Keys
             # ========================================
             if fk_configs:
                 fk_errors = self.fk_validator.validate_row(
@@ -65,7 +79,7 @@ class ValidationOrchestrator:
                 row_errors.extend(fk_errors)
             
             # ========================================
-            # VALIDAÇÃO 2: Tipos de Dados
+            # VALIDAÇÃO 3: Tipos de Dados
             # ========================================
             if column_configs:
                 type_errors = self._validate_row_types(

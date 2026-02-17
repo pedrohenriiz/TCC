@@ -1,5 +1,5 @@
 import { MapPin, Goal, Map, Plus, Send } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CreateMappingModal from './NewMappingModal';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import type { MappingDataProps } from './types';
 import ConfirmButton from '../../components/ConfirmButton';
 import { useMigrationCreate } from '../../hooks/migrations/useMigrationCreate';
 import { MigrationResult } from './MigrationResponse';
+import { useMigrationStore } from '../../store/useMigrationStore';
 
 export default function MappingPageLayout() {
   const { id } = useParams<{ id: string }>();
@@ -21,13 +22,22 @@ export default function MappingPageLayout() {
   const [editingRow, setEditingRow] = useState<MappingDataProps | null>(null);
 
   // ✨ Hook do React Query para migração
-  const { mutate: createMigration, isPending: isMigrating } = useMigrationCreate();
+  const { mutate: createMigration, isPending: isMigrating } =
+    useMigrationCreate();
+
+  const { reset } = useMigrationStore();
 
   const { data } = useQuery({
     queryKey: ['mappings', id],
     queryFn: () => getMigrationProjectMappings(Number(id)),
     enabled: Boolean(id),
   });
+
+  useEffect(() => {
+    return () => {
+      reset();
+    };
+  }, [reset]);
 
   const { data: tableConfigs } = useQuery({
     queryKey: ['tableConfigs'],
@@ -48,23 +58,23 @@ export default function MappingPageLayout() {
 
   const totalColumns = data?.reduce(
     (acc, item) => acc + item.columns.length,
-    0
+    0,
   );
 
   const totalOriginColumns = data?.reduce(
     (acc, item) => acc + item.columns.filter((c) => c.origin_column).length,
-    0
+    0,
   );
 
   const totalDestinyColumns = data?.reduce(
     (acc, item) => acc + item.columns.filter((c) => c.destiny_column).length,
-    0
+    0,
   );
 
   function handleOpenModal() {
     setOpenModal(true);
   }
-  
+
   function handleOpenEditMapping(mapping?: MappingDataProps | null = null) {
     setEditingRow(mapping);
     setOpenModal(true);

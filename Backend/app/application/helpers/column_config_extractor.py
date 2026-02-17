@@ -1,5 +1,3 @@
-# application/helpers/column_config_extractor.py
-
 from typing import List, Dict
 from sqlalchemy.orm import Session
 
@@ -17,7 +15,7 @@ class ColumnConfigExtractor:
         table_id: int
     ) -> List[Dict]:
         """
-        Extrai configurações de colunas no formato esperado pelo TypeValidator
+        Extrai configurações de colunas no formato esperado pelos validadores
         
         Args:
             mapping_columns: Lista de MappingColumn do SQLAlchemy
@@ -28,10 +26,11 @@ class ColumnConfigExtractor:
             [
                 {
                     'column_name': 'age',
-                    'origin_type': 'varchar',
+                    'origin_type': 'number',
                     'origin_size': None,
                     'destiny_type': 'int',
-                    'destiny_size': None
+                    'destiny_size': None,
+                    'is_nullable': True  # ✨ NOVO
                 },
                 ...
             ]
@@ -50,6 +49,7 @@ class ColumnConfigExtractor:
                 'origin_size': None,  # Modelo atual não tem size na origem
                 'destiny_type': mc.destiny_column.type,
                 'destiny_size': mc.destiny_column.size,
+                'is_nullable': mc.destiny_column.is_nullable,  # ✨ NOVO
             }
             
             configs.append(config)

@@ -35,7 +35,7 @@ interface SourceTablesStore {
   tableNameExists: (
     name: string,
     projectId: number,
-    excludeId?: number | null
+    excludeId?: number | null,
   ) => boolean;
   setSourceTableList: (table: SourceTable[]) => void;
 }
@@ -72,7 +72,7 @@ const useSourceTablesStore = create<SourceTablesStore>()(
                   ...updates,
                   updatedAt: new Date().toISOString(),
                 }
-              : table
+              : table,
           ),
         }));
       },
@@ -99,12 +99,11 @@ const useSourceTablesStore = create<SourceTablesStore>()(
         set({ sourceTables: [], currentSourceTable: null });
       },
 
-      tableNameExists: (name, projectId, excludeId = null) => {
+      tableNameExists: (name, excludeId = null) => {
         return get().sourceTables.some(
           (table) =>
-            table.id === projectId &&
             table.name.toLowerCase() === name.toLowerCase() &&
-            table.id !== excludeId
+            table.id !== excludeId,
         );
       },
     }),
@@ -113,8 +112,8 @@ const useSourceTablesStore = create<SourceTablesStore>()(
       partialize: (state) => ({
         sourceTables: state.sourceTables,
       }),
-    }
-  )
+    },
+  ),
 );
 
 export default useSourceTablesStore;
