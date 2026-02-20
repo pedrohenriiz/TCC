@@ -12,9 +12,9 @@ export interface SettingEffective {
 }
 
 export const getSettings = async (
-  category?: string
+  category?: string,
 ): Promise<SettingEffective[]> => {
   const params = category ? { category } : {};
-  const { data } = await api.get('/settings/effective', { params });
+  const { data } = await api.get('/settings', { params });
   return data;
 };

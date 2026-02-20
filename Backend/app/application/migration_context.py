@@ -1,4 +1,5 @@
-# application/migration_context.py
+from typing import Any, Optional
+from application.id_mapping_registry import IdMappingRegistry
 
 class MigrationContext:
     def __init__(self, allow_duplicates: bool = False, duplicate_strategy: str = 'first'):
@@ -14,6 +15,7 @@ class MigrationContext:
         self.allow_duplicates = allow_duplicates
         self.duplicate_strategy = duplicate_strategy
         self._duplicate_warnings: list[dict] = []
+        self.id_mapping = IdMappingRegistry()
 
     def register(
         self,
@@ -157,3 +159,15 @@ class MigrationContext:
                     print(f"    - Estratégia usada: {self.duplicate_strategy} (será usado ID {self.resolve(entity, w['natural_key'])})")
         
         print("=" * 80)
+    
+    def register_id_mapping(self, entity: str, old_id: Any, new_id: Any):
+        """Registra mapeamento de ID"""
+        self.id_mapping.register(entity, old_id, new_id)
+
+    def resolve_id_mapping(self, entity: str, old_id: Any) -> Optional[Any]:
+        """Resolve old_id para new_id"""
+        return self.id_mapping.resolve(entity, old_id)
+
+    def print_id_mapping_summary(self):
+        """Imprime resumo de mapeamentos"""
+        self.id_mapping.print_summary()

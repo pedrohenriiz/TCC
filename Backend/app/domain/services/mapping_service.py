@@ -16,6 +16,8 @@ from typing import Dict, List, Any, Optional
 from collections import defaultdict, deque
 from domain.enum.error_strategy import ErrorStrategy
 from domain.repositories.setting_repository import SettingRepository
+from application.id_generator import IdGenerator  # ✨ NOVO
+from domain.enum.id_generation_strategy import IdGenerationStrategy
 
 class MappingService:
     """
@@ -38,6 +40,9 @@ class MappingService:
         # Contexto será criado a cada migração
         self.context = None
         self.validation_orchestrator = None
+
+        # Gerador de ids
+        self.id_generator = IdGenerator()
     
     # ============================================================
     # CRUD BÁSICO
@@ -117,6 +122,11 @@ class MappingService:
         # ETAPA 2: TRANSFORMAÇÕES
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         self._apply_transformations(mapped_rows_by_table, raw_mappings)
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # ETAPA 2.5: GERAÇÃO DE IDs
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        self._apply_id_generation(mapped_rows_by_table, raw_mappings)
         
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # ETAPA 3: EXTRAÇÃO DE CONFIGURAÇÕES
@@ -166,6 +176,11 @@ class MappingService:
         # ETAPA 6: RESOLUÇÃO DE FKs
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         self._resolve_foreign_keys(filtered_rows, fk_mappings, raw_mappings)
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # ETAPA 6.5: RESOLVE FKs COM MAPEAMENTO DE IDs
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        self._resolve_fks_with_id_mapping(filtered_rows, fk_mappings)
         
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # ETAPA 7: GERAÇÃO DE SQL
@@ -286,10 +301,10 @@ class MappingService:
     
     def _load_error_strategy(self) -> ErrorStrategy:
         """Carrega estratégia de erro das settings"""
-        value = self.setting_repo.get_effective_value(
-            key='error_strategy',
-            owner_type='global'
-        )
+        try:
+            value = self.setting_repo.get('error_strategy')
+        except ValueError:
+            value = 'abort_on_first'
         return ErrorStrategy(value or 'abort_on_first')
     
     def _get_dependency_order(
@@ -833,3 +848,166 @@ class MappingService:
             "error": "Erro durante migração"
         }
         return messages.get(status, "Status desconhecido")
+    
+    def _apply_id_generation(
+        self,
+        mapped_rows_by_table: Dict[str, List[Dict]],
+        raw_mappings
+    ):
+        """
+        Aplica geração de IDs configurada e registra mapeamentos
+        
+        FLUXO:
+        1. Para cada tabela
+        2. Identifica coluna PK
+        3. Verifica estratégia de ID configurada
+        4. Se não for 'keep', gera novos IDs
+        5. Registra mapeamento (old_id → new_id)
+        6. Substitui ID na linha
+        """
+        print("\n🔄 APLICANDO GERAÇÃO DE IDs...")
+        
+        for table_id, rows in mapped_rows_by_table.items():
+            if not rows:
+                continue
+            
+            table = self.table_config.get_by_id(int(table_id))
+            
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 1. IDENTIFICA COLUNA PK
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            pk_column = self._get_pk_column_obj(table)
+            if not pk_column:
+                continue
+            
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 2. VERIFICA ESTRATÉGIA DE ID
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            strategy_str = pk_column.id_generation_strategy or 'keep'
+            strategy = IdGenerationStrategy(strategy_str)
+            
+            # Se mantém original, pula
+            if strategy == IdGenerationStrategy.KEEP:
+                print(f"  ✓ {table.name}.{pk_column.name}: KEEP (mantém original)")
+                continue
+            
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 3. PEGA CONFIGURAÇÃO
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            start_value = pk_column.id_start_value or 1
+            
+            print(f"  🔧 {table.name}.{pk_column.name}: {strategy.value.upper()} (start={start_value})")
+            
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 4. PROCESSA CADA LINHA
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            for idx, row in enumerate(rows):
+                if pk_column.name not in row:
+                    continue
+                
+                # Valor original do ID
+                old_id = row[pk_column.name]
+                
+                # Gera novo ID
+                new_id = self.id_generator.generate(
+                    strategy=strategy,
+                    original_value=old_id,
+                    entity=table.name,
+                    start_value=start_value
+                )
+                
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                # 5. REGISTRA MAPEAMENTO
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                self.context.register_id_mapping(
+                    entity=table.name,
+                    old_id=old_id,
+                    new_id=new_id
+                )
+                
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                # 6. SUBSTITUI ID NA LINHA
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                row[pk_column.name] = new_id
+                
+                # Debug primeiros 3
+                if idx < 3:
+                    print(f"     {old_id} → {new_id}")
+            
+            if len(rows) > 3:
+                print(f"     ... e mais {len(rows) - 3}")
+        
+        print("  ✅ Geração de IDs concluída")
+
+    def _resolve_fks_with_id_mapping(
+        self,
+        mapped_rows_by_table: Dict[str, List[Dict]],
+        fk_mappings: Dict[int, List[Dict]]
+    ):
+        """
+        Resolve FKs usando mapeamento de IDs
+        
+        Se a tabela pai teve IDs convertidos (1 → 1000),
+        as FKs filhas precisam ser atualizadas também.
+        
+        EXEMPLO:
+            customers:
+                CSV: id=1  →  Destino: id=1000
+            
+            orders:
+                CSV: customer_id=1  →  Precisa virar: customer_id=1000
+        """
+        print("\n🔗 RESOLVENDO FKs COM MAPEAMENTO DE IDs...")
+        
+        has_any_mapping = False
+        
+        for table_id, rows in mapped_rows_by_table.items():
+            if not rows:
+                continue
+            
+            table_fks = fk_mappings.get(table_id, [])
+            if not table_fks:
+                continue
+            
+            table = self.table_config.get_by_id(int(table_id))
+            
+            for fk_config in table_fks:
+                source_column = fk_config['source_column']
+                reference_entity = fk_config['reference_entity']
+                
+                print(f"  📋 {table.name}.{source_column} → {reference_entity}")
+                
+                # Verifica se a tabela referenciada tem mapeamentos de ID
+                mappings = self.context.id_mapping.get_all_mappings(reference_entity)
+                
+                if not mappings:
+                    print(f"     ℹ️ Sem mapeamentos de ID para {reference_entity}")
+                    continue
+                
+                has_any_mapping = True
+                
+                # Processa cada linha
+                updated_count = 0
+                for row in rows:
+                    if source_column not in row:
+                        continue
+                    
+                    old_fk_value = row[source_column]
+                    
+                    # Tenta resolver com mapeamento
+                    new_fk_value = self.context.resolve_id_mapping(
+                        entity=reference_entity,
+                        old_id=old_fk_value
+                    )
+                    
+                    if new_fk_value is not None:
+                        row[source_column] = new_fk_value
+                        updated_count += 1
+                
+                if updated_count > 0:
+                    print(f"     ✅ {updated_count} FK(s) atualizadas")
+                else:
+                    print(f"     ℹ️ Nenhuma FK precisou ser atualizada")
+        
+        if not has_any_mapping:
+            print("  ℹ️ Nenhum mapeamento de ID encontrado (estratégia = KEEP)")

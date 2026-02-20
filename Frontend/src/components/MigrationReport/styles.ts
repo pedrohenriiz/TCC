@@ -13,8 +13,8 @@ export const pdfStyles = StyleSheet.create({
   // Header
   header: {
     borderBottom: '3px solid #2563eb',
+    marginBottom: 12,
     paddingBottom: 30,
-    marginBottom: 40,
   },
 
   logo: {
@@ -41,7 +41,6 @@ export const pdfStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 20,
-    marginBottom: 40,
     padding: 20,
     backgroundColor: '#f9fafb',
     borderRadius: 8,
@@ -93,7 +92,7 @@ export const pdfStyles = StyleSheet.create({
 
   // Section
   section: {
-    marginBottom: 40,
+    marginTop: 12,
   },
 
   sectionTitle: {
@@ -114,7 +113,7 @@ export const pdfStyles = StyleSheet.create({
 
   statCard: {
     flex: 1,
-    padding: 20,
+    padding: 8,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 2,
@@ -282,8 +281,7 @@ export const pdfStyles = StyleSheet.create({
 
   // Footer
   footer: {
-    marginTop: 60,
-    paddingTop: 20,
+    paddingTop: 12,
     borderTop: '2px solid #e5e7eb',
     alignItems: 'center',
   },

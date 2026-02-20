@@ -1,82 +1,49 @@
-# infra/controllers/migrate_controller.py
-
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from infra.database.database import database
 from domain.services.mapping_service import MappingService
-from domain.services.setting_service import SettingService
+from domain.repositories.setting_repository import SettingRepository
 from pydantic import BaseModel
 
-teste = APIRouter(prefix="/migrate", tags=["Migration"])
+router = APIRouter(prefix="/migrate", tags=["Migration"])
+
 
 class MigrateRequest(BaseModel):
     migration_project_id: int
 
-@teste.post("/")
-def migrate(
-    request: MigrateRequest,
-    db: Session = Depends(database)
-):
+
+@router.post("/")
+def migrate(request: MigrateRequest, db: Session = Depends(database)):
     """
     Executa a migração de dados.
-    
-    **Parâmetros:**
-    - `migration_project_id`: ID do projeto de migração
-    
+
     **Comportamento:**
-    - Com `allow_duplicates=False`: Erro se encontrar "João Silva" duplicado
-    - Com `allow_duplicates=True, duplicate_strategy='first'`: Usa o primeiro "João Silva" (ID 100)
-    - Com `allow_duplicates=True, duplicate_strategy='last'`: Usa o último "João Silva" (ID 300)
+    - Com `allow_duplicates=False`: Erro se encontrar chaves naturais duplicadas
+    - Com `allow_duplicates=True, duplicate_strategy='first'`: Usa o primeiro registro duplicado
+    - Com `allow_duplicates=True, duplicate_strategy='last'`: Usa o último registro duplicado
     """
     try:
-        setting_service = SettingService(db)
-        
-        allow_duplicates_str = setting_service.get_effective_value(
-            key='allow_duplicates',
-            owner_type='global'
-        )
-        
-        duplicate_strategy = setting_service.get_effective_value(
-            key='duplicate_strategy',
-            owner_type='global'
-        )
-        
-        # Converter string para boolean
-        allow_duplicates = allow_duplicates_str.lower() == 'true'
+        settings = SettingRepository(db)
 
-        service = MappingService(db)
-        
-        result = service.get_by_migration_project(
+        allow_duplicates = settings.get("allow_duplicates").lower() == "true"
+        duplicate_strategy = settings.get("duplicate_strategy")
+
+        result = MappingService(db).get_by_migration_project(
             migration_project_id=request.migration_project_id,
             allow_duplicates=allow_duplicates,
-            duplicate_strategy=duplicate_strategy
+            duplicate_strategy=duplicate_strategy,
         )
-        
+
         return {
             "success": True,
-            "message": "Migração executada com sucesso!",
             "data": result,
-            "settings_used": { 
+            "settings_used": {
                 "allow_duplicates": allow_duplicates,
-                "duplicate_strategy": duplicate_strategy
-            }
+                "duplicate_strategy": duplicate_strategy,
+            },
         }
-        
+
     except ValueError as e:
-        # Erro de duplicata ou outro erro de validação
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Validation Error",
-                "message": str(e),
-                "suggestion": "Use 'allow_duplicates: true' para permitir duplicatas"
-            }
-        )
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "Migration Error",
-                "message": str(e)
-            }
-        )
+        raise HTTPException(status_code=500, detail=str(e))

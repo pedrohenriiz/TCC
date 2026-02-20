@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Field, FieldArray, ErrorMessage } from 'formik';
-import { Link, Trash2, AlertCircle } from 'lucide-react';
+import { Link, Trash2, AlertCircle, Zap } from 'lucide-react';
 import { getTableConfigs } from '../../../../services/tableConfigs/getTableConfigs';
 import { useParams } from 'react-router-dom';
 import type { FormProps } from '../types';
@@ -8,16 +8,16 @@ import type { FormProps } from '../types';
 // Componente customizado para mostrar erros após submit
 const FieldError = ({ name, formik }: { name: string; formik: any }) => {
   if (formik.submitCount === 0) return null;
-  
+
   const parts = name.split('.');
   let error: any = formik.errors;
-  
+
   for (const part of parts) {
     if (error) error = error[part];
   }
-  
+
   if (!error) return null;
-  
+
   return <div className='text-xs text-red-600 mt-1 font-medium'>{error}</div>;
 };
 
@@ -95,10 +95,23 @@ export default function TableConfigColumnsForm({
     'FLOAT',
   ];
 
+  const idGenerationStrategies = [
+    {
+      value: 'keep',
+      label: 'Mantém Original',
+      description: 'Usa o ID atual',
+    },
+    {
+      value: 'auto_increment',
+      label: 'Auto Incremento',
+      description: 'Gera IDs sequenciais',
+    },
+  ];
+
   const getColumnsForTable = (tableId: number) => {
     if (!allTables || !tableId) return [];
     const table = allTables.find(
-      (t: { id: number }) => t.id === Number(tableId)
+      (t: { id: number }) => t.id === Number(tableId),
     );
     return table?.columns || [];
   };
@@ -111,16 +124,16 @@ export default function TableConfigColumnsForm({
   // Helper para verificar se campo tem erro
   const hasError = (fieldName: string) => {
     if (formik.submitCount === 0) return false;
-    
+
     const error = formik.errors;
     const parts = fieldName.split('.');
-    
+
     let errorValue: any = error;
-    
+
     for (const part of parts) {
       if (errorValue) errorValue = errorValue[part];
     }
-    
+
     return !!errorValue;
   };
 
@@ -129,22 +142,34 @@ export default function TableConfigColumnsForm({
       {({ remove }) => (
         <div className='space-y-4'>
           {/* Erro global de colunas */}
-          {formik.submitCount > 0 && typeof formik.errors.columns === 'string' && (
-            <div className='bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3'>
-              <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
-              <div className='text-sm text-red-800'>{formik.errors.columns}</div>
-            </div>
-          )}
+          {formik.submitCount > 0 &&
+            typeof formik.errors.columns === 'string' && (
+              <div className='bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3'>
+                <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+                <div className='text-sm text-red-800'>
+                  {formik.errors.columns}
+                </div>
+              </div>
+            )}
 
           {formik.values.columns.map((col, index) => {
             const columnErrors = formik.errors.columns?.[index];
-            const hasColumnError = formik.submitCount > 0 && columnErrors && typeof columnErrors === 'object';
-            
+            const hasColumnError =
+              formik.submitCount > 0 &&
+              columnErrors &&
+              typeof columnErrors === 'object';
+
+            const isPK = formik.values.columns[index].is_pk;
+            const idStrategy =
+              formik.values.columns[index].id_generation_strategy || 'keep';
+
             return (
               <div
                 key={col.id || index}
                 className={`border rounded-lg p-4 bg-white ${
-                  hasColumnError ? 'border-red-300 ring-2 ring-red-200' : 'border-gray-200'
+                  hasColumnError
+                    ? 'border-red-300 ring-2 ring-red-200'
+                    : 'border-gray-200'
                 }`}
               >
                 <div className='grid grid-cols-12 gap-3 items-start mb-4'>
@@ -161,7 +186,10 @@ export default function TableConfigColumnsForm({
                           : 'border-gray-300'
                       }`}
                     />
-                    <FieldError name={`columns.${index}.name`} formik={formik} />
+                    <FieldError
+                      name={`columns.${index}.name`}
+                      formik={formik}
+                    />
                   </div>
 
                   <div className='col-span-2'>
@@ -184,7 +212,10 @@ export default function TableConfigColumnsForm({
                         </option>
                       ))}
                     </Field>
-                    <FieldError name={`columns.${index}.type`} formik={formik} />
+                    <FieldError
+                      name={`columns.${index}.type`}
+                      formik={formik}
+                    />
                   </div>
 
                   <div className='col-span-2'>
@@ -198,14 +229,22 @@ export default function TableConfigColumnsForm({
                       name={`columns.${index}.size`}
                       placeholder='255'
                       type='number'
-                      disabled={['TEXT', 'DATE', 'DATETIME', 'BOOLEAN'].includes(col.type)}
+                      disabled={[
+                        'TEXT',
+                        'DATE',
+                        'DATETIME',
+                        'BOOLEAN',
+                      ].includes(col.type)}
                       className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
                         hasError(`columns.${index}.size`)
                           ? 'border-red-300 bg-red-50'
                           : 'border-gray-300'
                       }`}
                     />
-                    <FieldError name={`columns.${index}.size`} formik={formik} />
+                    <FieldError
+                      name={`columns.${index}.size`}
+                      formik={formik}
+                    />
                   </div>
 
                   <div className='col-span-3 flex items-center gap-4 pt-5'>
@@ -217,7 +256,7 @@ export default function TableConfigColumnsForm({
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           formik.setFieldValue(
                             `columns.${index}.is_pk`,
-                            e.target.checked
+                            e.target.checked,
                           )
                         }
                         className='rounded text-blue-600 focus:ring-blue-500'
@@ -233,7 +272,7 @@ export default function TableConfigColumnsForm({
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           formik.setFieldValue(
                             `columns.${index}.is_nullable`,
-                            e.target.checked
+                            e.target.checked,
                           )
                         }
                         className='rounded text-blue-600 focus:ring-blue-500'
@@ -248,13 +287,83 @@ export default function TableConfigColumnsForm({
                       onClick={() => remove(index)}
                       className='flex items-center gap-2 text-red-600 hover:text-red-800 text-sm'
                       disabled={formik.values.columns.length === 1}
-                      title={formik.values.columns.length === 1 ? 'A tabela deve ter pelo menos uma coluna' : 'Remover coluna'}
+                      title={
+                        formik.values.columns.length === 1
+                          ? 'A tabela deve ter pelo menos uma coluna'
+                          : 'Remover coluna'
+                      }
                     >
                       <Trash2 className='w-4 h-4' />
                       Remover
                     </button>
                   </div>
                 </div>
+
+                {isPK && (
+                  <div className='pt-4 border-t border-gray-200 mb-4'>
+                    <div className='flex items-center gap-2 mb-3'>
+                      <Zap size={16} className='text-purple-600' />
+                      <span className='text-sm font-medium text-gray-700'>
+                        Geração de ID
+                      </span>
+                    </div>
+
+                    <div className='grid grid-cols-2 gap-4'>
+                      <div>
+                        <label className='block text-xs font-medium text-gray-700 mb-1'>
+                          Estratégia
+                        </label>
+                        <Field
+                          as='select'
+                          name={`columns.${index}.id_generation_strategy`}
+                          className='w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                        >
+                          {idGenerationStrategies.map((strategy) => (
+                            <option key={strategy.value} value={strategy.value}>
+                              {strategy.label}
+                            </option>
+                          ))}
+                        </Field>
+                        <p className='text-xs text-gray-500 mt-1'>
+                          {
+                            idGenerationStrategies.find(
+                              (s) => s.value === idStrategy,
+                            )?.description
+                          }
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className='block text-xs font-medium text-gray-700 mb-1'>
+                          Valor Inicial
+                          {idStrategy === 'auto_increment' && (
+                            <span className='text-purple-600'>
+                              {' '}
+                              (recomendado)
+                            </span>
+                          )}
+                        </label>
+                        <Field
+                          name={`columns.${index}.id_start_value`}
+                          placeholder='1'
+                          type='number'
+                          min='1'
+                          disabled={idStrategy !== 'auto_increment'}
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            idStrategy !== 'auto_increment'
+                              ? 'bg-gray-100 cursor-not-allowed border-gray-300'
+                              : 'border-gray-300'
+                          }`}
+                        />
+                        <p className='text-xs text-gray-500 mt-1'>
+                          {idStrategy === 'auto_increment'
+                            ? 'IDs começarão deste valor'
+                            : 'Usado apenas com Auto Increment'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Linha 2: Foreign Key */}
                 <div className='pt-4 border-t border-gray-200'>
@@ -279,11 +388,11 @@ export default function TableConfigColumnsForm({
                             : null;
                           formik.setFieldValue(
                             `columns.${index}.foreign_table_id`,
-                            value
+                            value,
                           );
                           formik.setFieldValue(
                             `columns.${index}.foreign_column_id`,
-                            null
+                            null,
                           );
                         }}
                         className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -301,7 +410,10 @@ export default function TableConfigColumnsForm({
                             </option>
                           ))}
                       </Field>
-                      <FieldError name={`columns.${index}.foreign_table_id`} formik={formik} />
+                      <FieldError
+                        name={`columns.${index}.foreign_table_id`}
+                        formik={formik}
+                      />
                     </div>
 
                     <div>
@@ -325,10 +437,13 @@ export default function TableConfigColumnsForm({
                               <option key={foreignCol.id} value={foreignCol.id}>
                                 {foreignCol.name} ({foreignCol.type})
                               </option>
-                            )
+                            ),
                           )}
                       </Field>
-                      <FieldError name={`columns.${index}.foreign_column_id`} formik={formik} />
+                      <FieldError
+                        name={`columns.${index}.foreign_column_id`}
+                        formik={formik}
+                      />
                     </div>
                   </div>
 
@@ -342,13 +457,13 @@ export default function TableConfigColumnsForm({
                           <strong>
                             {
                               allTables?.find(
-                                (t) => t.id === col.foreign_table_id
+                                (t) => t.id === col.foreign_table_id,
                               )?.name
                             }
                             .
                             {
                               getColumnsForTable(col.foreign_table_id).find(
-                                (c) => c.id === col.foreign_column_id
+                                (c) => c.id === col.foreign_column_id,
                               )?.name
                             }
                           </strong>

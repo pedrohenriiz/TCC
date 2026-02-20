@@ -23,6 +23,8 @@ class TableConfigRepository:
                     is_nullable=col.is_nullable,
                     foreign_table_id=col.foreign_table_id,
                     foreign_column_id=col.foreign_column_id,
+                    id_generation_strategy=col.id_generation_strategy if hasattr(col, 'id_generation_strategy') else 'keep',
+                    id_start_value=col.id_start_value if hasattr(col, 'id_start_value') else 1,
                     table_id=table.id
                 )
                 table.columns.append(column)
@@ -75,7 +77,9 @@ class TableConfigRepository:
                         "name": c.name,
                         "type": c.type,
                         "foreign_table_id": c.foreign_table_id,
-                        "foreign_column_id": c.foreign_column_id
+                        "foreign_column_id": c.foreign_column_id,
+                        "id_generation_strategy": c.id_generation_strategy,
+                        "id_start_value": c.id_start_value,
                     }
                     for c in columns
                 ]

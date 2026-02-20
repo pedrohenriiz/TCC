@@ -7,6 +7,7 @@ import { SummaryStats } from './SummaryStats';
 import { ErrorFilters } from './ErrorFilters';
 import { ErrorCard } from './ErrorCard';
 import { PDFDownloadButton } from './PDFDownloadButton';
+import { DownloadSQLButton } from './DownloadSQLButton';
 
 export function MigrationResult() {
   const { result, isResultVisible, hideResult } = useMigrationStore();
@@ -132,23 +133,13 @@ export function MigrationResult() {
         {/* Footer */}
         <div className='bg-gray-50 p-6 border-t border-gray-200 flex items-center justify-between'>
           <div className='flex gap-2'>
-            <button className='px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 transition-colors'>
-              <Download className='w-4 h-4' />
-              <span>Baixar Relatório CSV</span>
-            </button>
+            <DownloadSQLButton sqlFile={result.sql_file!} />
 
             <PDFDownloadButton
               data={result}
               projectName='Migração de Dados'
               executedBy='Usuário'
             />
-          </div>
-
-          <div className='flex gap-2'>
-            <button className='px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2 transition-colors'>
-              <RefreshCw className='w-4 h-4' />
-              <span>Tentar Novamente</span>
-            </button>
           </div>
         </div>
       </div>

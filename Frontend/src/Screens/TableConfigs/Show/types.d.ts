@@ -14,6 +14,8 @@ interface ColumnProps {
   is_nullable: boolean;
   foreign_table_id: number | null;
   foreign_column_id: number | null;
+  id_generation_strategy: string;
+  id_start_value: number;
 }
 
 type FormProps = FormikProps<TableConfigProps>;

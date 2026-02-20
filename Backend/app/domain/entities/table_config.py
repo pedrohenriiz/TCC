@@ -1,3 +1,5 @@
+# domain/models/table_config.py - ATUALIZADO
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 from infra.database.connection import Base
@@ -38,6 +40,10 @@ class TableConfigColumns(Base):
     precision = Column(Integer, nullable=True)
     is_pk = Column(Boolean, nullable=False, default=False)
     is_nullable = Column(Boolean, nullable=False, default=True)
+    
+    # ✨ NOVO: Configuração de geração de ID
+    id_generation_strategy = Column(String(50), nullable=False, default='keep')
+    id_start_value = Column(Integer, nullable=True, default=1)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -5,6 +5,6 @@ export interface UpdateSettingsData {
 }
 
 export const updateSettings = async (requestData: UpdateSettingsData) => {
-  const { data } = await api.put('/settings/effective/bulk', requestData);
+  const { data } = await api.put('/settings/bulk', requestData);
   return data;
 };

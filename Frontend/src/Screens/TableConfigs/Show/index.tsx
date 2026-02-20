@@ -50,6 +50,8 @@ export default function TableConfigsShow() {
         is_nullable: col.is_nullable === false ? false : true,
         foreign_table_id: col.foreign_table_id || '',
         foreign_column_id: col.foreign_column_id || '',
+        id_generation_strategy: col.id_generation_strategy || 'keep',
+        id_start_value: col.id_start_value ? Number(col.id_start_value) : 1,
       })) || [];
 
     return {
@@ -70,6 +72,8 @@ export default function TableConfigsShow() {
       is_nullable: col.is_nullable !== undefined ? col.is_nullable : true,
       foreign_table_id: Number(col.foreign_table_id) || null,
       foreign_column_id: Number(col.foreign_column_id) || null,
+      id_generation_strategy: col.id_generation_strategy || 'keep',
+      id_start_value: col.id_start_value ? Number(col.id_start_value) : 1,
     }));
 
     const formattedData = {

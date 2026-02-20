@@ -9,6 +9,8 @@ class TableConfigColumnCreate(BaseModel):
     is_nullable: Optional[bool] = True
     foreign_table_id: Optional[int] = None
     foreign_column_id: Optional[int] = None
+    id_generation_strategy: Optional[str] = 'keep'
+    id_start_value: Optional[int] = 1
 
 class TableConfigColumnUpdate(BaseModel):
     name: Optional[str] = None
@@ -18,6 +20,8 @@ class TableConfigColumnUpdate(BaseModel):
     is_nullable: Optional[bool] = True
     foreign_table_id: Optional[int] = None
     foreign_column_id: Optional[int] = None
+    id_generation_strategy: Optional[str] = 'keep'
+    id_start_value: Optional[int] = 1
 
 class TableConfigCreate(BaseModel):
     name: str
