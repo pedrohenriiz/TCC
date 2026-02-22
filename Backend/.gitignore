@@ -1,8 +1,9 @@
 .venv
 
-data/
 
 *.db
 *.csv
+
+app/data/*/*
 
 app/data.db
