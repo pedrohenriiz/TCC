@@ -1,4 +1,0 @@
-xid,nome,idade,email,ativo,data_cadastro
-1,João Silva,25,joao@email.com,true,2024-01-15
-2,Maria Souza,30,maria@email.com,true,2024-01-16
-3,Pedro Santos,35,pedro@email.com,false,2024-01-17
