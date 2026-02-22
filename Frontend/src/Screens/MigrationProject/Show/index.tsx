@@ -30,8 +30,7 @@ const validationSchema = Yup.object({
     .required('Nome do projeto é obrigatório'),
   description: Yup.string()
     .trim()
-    .min(10, 'Descrição deve ter no mínimo 10 caracteres')
-    .required('Descrição é obrigatória'),
+    .min(10, 'Descrição deve ter no mínimo 10 caracteres'),
 });
 
 export default function ProjectForm() {

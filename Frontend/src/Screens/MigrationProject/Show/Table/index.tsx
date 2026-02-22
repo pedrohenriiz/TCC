@@ -1,36 +1,29 @@
-import { Trash2, Plus, Pen } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import DataTable from '../../../../components/DataTable';
-import useSourceTablesStore from '../../../../store/useSourceTableStore';
+import useSourceTablesStore, {
+  type SourceTableColumnProps,
+} from '../../../../store/useSourceTableStore';
 import { useParams } from 'react-router-dom';
 import TableModal from './CreateOriginTableModal'; // Nome atualizado
 import ConfirmButton from '../../../../components/ConfirmButton';
 import EmptyTable from './EmptyTable';
-import TableButton from '../../../../components/TableButton';
 import ConfirmModal from '../../../../components/ConfirmModal';
 import { useMigrationProjectOriginTableDelete } from '../../../../hooks/MigrationProjectsOriginTables/useMigrationProjectOriginTableDelete';
+import TableColumns from './TableColumns';
 
 interface TableProps {
   onParentHandleFormSubmit: () => void;
 }
 
-interface RowProps {
+export interface RowProps {
   id: number;
   name: string;
   migration_project_id: number;
   created_at: string;
   updated_at: string;
-  deleted_at: string;
-  columns: {
-    id: number;
-    is_pk: boolean;
-    name: string;
-    origin_table_id: number;
-    type: string;
-    updated_at: string;
-    created_at: string;
-    deleted_at: string;
-  }[];
+  deleted_at?: string;
+  columns: SourceTableColumnProps[];
 }
 
 export default function Table({ onParentHandleFormSubmit }: TableProps) {
@@ -40,7 +33,6 @@ export default function Table({ onParentHandleFormSubmit }: TableProps) {
 
   const { getSourceTablesByProject } = useSourceTablesStore();
 
-  // ✅ Estados corretos
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingRow, setDeletingRow] = useState<{
@@ -67,79 +59,21 @@ export default function Table({ onParentHandleFormSubmit }: TableProps) {
     handleCloseModal();
   };
 
-  const handleOpenDeleteModal = (table: RowProps) => {
-    setDeletingRow({ id: table.id, name: table.name });
+  const handleOpenCreateModal = (row: RowProps) => {
+    setShowCreateModal(true);
+
+    setEditTable(row);
+  };
+
+  const handleOpenDeleteModal = (row: RowProps) => {
+    setDeletingRow({ id: row.id, name: row.name });
     setShowDeleteModal(true);
   };
 
-  const columns = [
-    {
-      name: 'name',
-      header: 'Nome da Tabela',
-      accessor: (row: RowProps) => row.name,
-      sortable: true,
-      searchable: true,
-      headerAlign: 'text-left',
-      cellAlign: 'text-left',
-    },
-
-    {
-      name: 'columns',
-      header: 'Colunas',
-      accessor: (row: RowProps) => row.columns.length,
-      sortable: true,
-      searchable: false,
-      headerAlign: 'text-center',
-      cellAlign: 'text-center',
-      width: '100px',
-    },
-    {
-      name: 'createdAt',
-      header: 'Criado em',
-      accessor: (row: RowProps) =>
-        new Date(row.created_at).toLocaleString('pt-BR'),
-      sortable: true,
-      searchable: false,
-      headerAlign: 'text-left',
-      cellAlign: 'text-left',
-      width: '160px',
-    },
-    {
-      name: 'actions',
-      header: 'Ações',
-      accessor: () => null,
-      sortable: false,
-      searchable: false,
-      headerAlign: 'text-center',
-      cellAlign: 'text-center',
-      width: '100px',
-      render: (_: null, row: RowProps) => {
-        return (
-          <div className='flex items-center justify-center gap-2'>
-            <TableButton
-              variant='edit'
-              Icon={<Pen className='w-4 h-4' />}
-              title='Editar tabela'
-              onClick={() => {
-                setShowCreateModal(true);
-
-                setEditTable(row);
-              }}
-            />
-
-            <TableButton
-              variant='delete'
-              Icon={<Trash2 className='w-4 h-4' />}
-              title='Excluir tabela'
-              onClick={() => {
-                handleOpenDeleteModal(row);
-              }}
-            />
-          </div>
-        );
-      },
-    },
-  ];
+  const columns = TableColumns({
+    onOpenCreateModal: handleOpenCreateModal,
+    onOpenDeleteModal: handleOpenDeleteModal,
+  });
 
   return (
     <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>

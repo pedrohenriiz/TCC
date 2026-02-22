@@ -124,18 +124,18 @@ class MappingService:
         self._apply_transformations(mapped_rows_by_table, raw_mappings)
 
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 2.5: GERAÇÃO DE IDs
+        # ETAPA 3: GERAÇÃO DE IDs
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         self._apply_id_generation(mapped_rows_by_table, raw_mappings)
-        
+
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 3: EXTRAÇÃO DE CONFIGURAÇÕES
+        # ETAPA 4: EXTRAÇÃO DE CONFIGURAÇÕES
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         fk_mappings = self._extract_fk_mappings(raw_mappings)
         dependency_order = self._get_dependency_order(mapped_rows_by_table, fk_mappings)
-        
+
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 4: VALIDAÇÕES (FK + TIPOS)
+        # ETAPA 5: VALIDAÇÕES (FK + TIPOS)
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         validation_result, filtered_rows = self._validate_and_filter(
             mapped_rows_by_table=mapped_rows_by_table,
@@ -153,9 +153,9 @@ class MappingService:
                 error_strategy=error_strategy,
                 validation_result=validation_result
             )
-        
+
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 5: REGISTRO DE PKs
+        # ETAPA 6: REGISTRO DE PKs
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         try:
             self._register_primary_keys(filtered_rows, raw_mappings)
@@ -167,23 +167,19 @@ class MappingService:
                 validation_result=validation_result,
                 message=str(e)
             )
-        
+
         # Verifica duplicatas
         if self.context.has_duplicates():
             self.context.print_duplicate_report()
-        
-        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 6: RESOLUÇÃO DE FKs
-        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        self._resolve_foreign_keys(filtered_rows, fk_mappings, raw_mappings)
 
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 6.5: RESOLVE FKs COM MAPEAMENTO DE IDs
+        # ETAPA 7: RESOLUÇÃO DE FKs
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        self._resolve_foreign_keys(filtered_rows, fk_mappings, raw_mappings)
         self._resolve_fks_with_id_mapping(filtered_rows, fk_mappings)
-        
+
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 7: GERAÇÃO DE SQL
+        # ETAPA 8: GERAÇÃO DE SQL
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         sql_file = self._generate_sql(
             filtered_rows=filtered_rows,
@@ -192,7 +188,7 @@ class MappingService:
         )
         
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        # ETAPA 8: RESULTADO FINAL
+        # ETAPA 9: RESULTADO FINAL
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         return self._build_success_response(
             migration_project_id=migration_project_id,
@@ -315,21 +311,21 @@ class MappingService:
         """Ordena tabelas por dependência (código original mantido)"""
         # [CÓDIGO ORIGINAL - NÃO MUDOU]
         dependencies = defaultdict(list)
-        table_names = {}
-        
+        table_names = {
+            table_id: self.table_config.get_by_id(int(table_id)).name
+            for table_id in mapped_rows_by_table.keys()
+        }
+
         for table_id in mapped_rows_by_table.keys():
-            table = self.table_config.get_by_id(int(table_id))
-            table_names[table_id] = table.name
-            
             if table_id in fk_mappings:
                 for fk_config in fk_mappings[table_id]:
                     reference_entity = fk_config['reference_entity']
-                    
-                    for ref_table_id in mapped_rows_by_table.keys():
-                        ref_table = self.table_config.get_by_id(int(ref_table_id))
-                        if ref_table.name == reference_entity:
-                            dependencies[table_id].append(ref_table_id)
-                            break
+                    ref_table_id = next(
+                        (tid for tid, name in table_names.items() if name == reference_entity),
+                        None
+                    )
+                    if ref_table_id:
+                        dependencies[table_id].append(ref_table_id)
         
         in_degree = {table_id: 0 for table_id in mapped_rows_by_table.keys()}
         
@@ -420,86 +416,81 @@ class MappingService:
             real_destiny_table = self.table_config.get_by_id(real_destiny_table_id)
             print(f"    ✓ Tabela de destino real: {real_destiny_table.name} (ID={real_destiny_table_id})")
             
-            # Agora processa as FKs para esta tabela
+            # Processa as FKs para esta tabela
             for mapping_column in mapping_columns:
                 destiny_column = mapping_column.destiny_column
-                origin_column = mapping_column.origin_column
-                
-                # CASO 1: Coluna com FK explícita
+                origin_column  = mapping_column.origin_column
+
                 if destiny_column.foreign_table_id and destiny_column.foreign_column_id:
-                    foreign_table = destiny_column.foreign_table
-                    
-                    print(f"    CASO 1: FK explícita encontrada!")
-                    print(f"      {origin_column.name} -> {destiny_column.name} (ref: {foreign_table.name})")
-                    
-                    if real_destiny_table_id not in fk_mappings:
-                        fk_mappings[real_destiny_table_id] = []
-                    
-                    fk_mappings[real_destiny_table_id].append({
-                        'source_column': destiny_column.name,
-                        'target_column': destiny_column.name,
-                        'reference_entity': foreign_table.name,
-                        'reference_column': destiny_column.foreign_column.name
-                    })
-                
-                # CASO 2: Mapeamento para PK de OUTRA tabela
+                    self._append_explicit_fk(fk_mappings, real_destiny_table_id, destiny_column, origin_column)
+
                 elif destiny_column.is_pk and destiny_column.table_id != real_destiny_table_id:
-                    reference_table = destiny_column.table
-                    
-                    print(f"    CASO 2: Mapeamento para PK de outra tabela!")
-                    print(f"      {origin_column.name} -> {reference_table.name}.{destiny_column.name}")
-                    
-                    # Gera nome da coluna FK
-                    fk_column_name = f"{reference_table.name.rstrip('s2').rstrip('s')}_id"
-                    print(f"      Coluna FK gerada: {fk_column_name}")
-                    
-                    if real_destiny_table_id not in fk_mappings:
-                        fk_mappings[real_destiny_table_id] = []
-                    
-                    fk_mappings[real_destiny_table_id].append({
-                        'source_column': origin_column.name,
-                        'target_column': fk_column_name,
-                        'reference_entity': reference_table.name,
-                        'reference_column': destiny_column.name
-                    })
-                
-                # CASO 3: Coluna que PARECE FK mas não está configurada
+                    self._append_pk_reference_fk(fk_mappings, real_destiny_table_id, destiny_column, origin_column)
+
                 elif destiny_column.name.endswith('_id') and not destiny_column.is_pk:
-                    print(f"    CASO 3: Coluna suspeita de FK (termina com _id mas sem foreign_table_id)")
-                    print(f"      {origin_column.name} -> {destiny_column.name}")
-                    
-                    base_name = destiny_column.name[:-3]
-                    possible_tables = []
-                    
-                    for other_mc in mapping_columns:
-                        other_dest_table = other_mc.destiny_table
-                        if (other_dest_table.name.startswith(base_name) or 
-                            other_dest_table.name.rstrip('s2').rstrip('s') == base_name):
-                            if other_dest_table.id != real_destiny_table_id:
-                                possible_tables.append(other_dest_table)
-                    
-                    if possible_tables:
-                        reference_table = possible_tables[0]
-                        ref_pk = self._get_pk_column_obj(reference_table)
-                        
-                        if ref_pk:
-                            print(f"      ✓ Detectado como FK para {reference_table.name}.{ref_pk.name}")
-                            
-                            if real_destiny_table_id not in fk_mappings:
-                                fk_mappings[real_destiny_table_id] = []
-                            
-                            fk_mappings[real_destiny_table_id].append({
-                                'source_column': origin_column.name,
-                                'target_column': destiny_column.name,
-                                'reference_entity': reference_table.name,
-                                'reference_column': ref_pk.name
-                            })
-                    else:
-                        print(f"      ⚠️ Não foi possível determinar tabela referenciada")
+                    self._append_implicit_fk(fk_mappings, real_destiny_table_id, destiny_column, origin_column, mapping_columns)
         
         print(f"\n  FKs finais detectadas: {len(fk_mappings)} tabela(s)")
         return fk_mappings
-    
+
+    def _append_explicit_fk(self, fk_mappings, table_id, destiny_column, origin_column):
+        """CASO 1: coluna de destino tem FK explícita configurada (foreign_table_id + foreign_column_id)."""
+        foreign_table = destiny_column.foreign_table
+        print(f"    CASO 1: FK explícita encontrada!")
+        print(f"      {origin_column.name} -> {destiny_column.name} (ref: {foreign_table.name})")
+
+        fk_mappings.setdefault(table_id, []).append({
+            'source_column': destiny_column.name,
+            'target_column': destiny_column.name,
+            'reference_entity': foreign_table.name,
+            'reference_column': destiny_column.foreign_column.name
+        })
+
+    def _append_pk_reference_fk(self, fk_mappings, table_id, destiny_column, origin_column):
+        """CASO 2: coluna de destino é PK de outra tabela — gera coluna FK implícita."""
+        reference_table = destiny_column.table
+        fk_column_name = f"{reference_table.name.rstrip('s2').rstrip('s')}_id"
+        print(f"    CASO 2: Mapeamento para PK de outra tabela!")
+        print(f"      {origin_column.name} -> {reference_table.name}.{destiny_column.name}")
+        print(f"      Coluna FK gerada: {fk_column_name}")
+
+        fk_mappings.setdefault(table_id, []).append({
+            'source_column': origin_column.name,
+            'target_column': fk_column_name,
+            'reference_entity': reference_table.name,
+            'reference_column': destiny_column.name
+        })
+
+    def _append_implicit_fk(self, fk_mappings, table_id, destiny_column, origin_column, mapping_columns):
+        """CASO 3: coluna termina com _id sem FK explícita — tenta inferir tabela referenciada."""
+        print(f"    CASO 3: Coluna suspeita de FK (termina com _id mas sem foreign_table_id)")
+        print(f"      {origin_column.name} -> {destiny_column.name}")
+
+        base_name = destiny_column.name[:-3]
+        possible_tables = [
+            mc.destiny_table
+            for mc in mapping_columns
+            if mc.destiny_table.id != table_id and (
+                mc.destiny_table.name.startswith(base_name) or
+                mc.destiny_table.name.rstrip('s2').rstrip('s') == base_name
+            )
+        ]
+
+        if not possible_tables:
+            print(f"      ⚠️ Não foi possível determinar tabela referenciada")
+            return
+
+        reference_table = possible_tables[0]
+        ref_pk = self._get_pk_column_obj(reference_table)
+        if ref_pk:
+            print(f"      ✓ Detectado como FK para {reference_table.name}.{ref_pk.name}")
+            fk_mappings.setdefault(table_id, []).append({
+                'source_column': origin_column.name,
+                'target_column': destiny_column.name,
+                'reference_entity': reference_table.name,
+                'reference_column': ref_pk.name
+            })
+
     def _register_primary_keys(
         self,
         mapped_rows_by_table: Dict[str, List[Dict]],
@@ -612,30 +603,14 @@ class MappingService:
                     print(f"  🔍 Valor original na FK: '{sample_value}'")
                 
                 # Descobre transformações da tabela referenciada
-                transformations_to_apply = None
-                reference_table_id = None
-                actual_reference_column = None
-                
-                for dest_table_id, _ in mapped_rows_by_table.items():
-                    temp_table = self.table_config.get_by_id(int(dest_table_id))
-                    if temp_table.name == reference_entity:
-                        reference_table_id = dest_table_id
-                        break
-                
-                if reference_table_id:
-                    print(f"  🔍 Procurando transformações em colunas de {reference_entity}")
-                    
-                    for mapping in raw_mappings:
-                        for mapping_column in mapping.columns:
-                            if mapping_column.destiny_table_id == reference_table_id:
-                                if mapping_column.transformations:
-                                    transformations_to_apply = mapping_column.transformations
-                                    actual_reference_column = mapping_column.destiny_column.name
-                                    print(f"  ✅ Encontradas {len(transformations_to_apply)} transformação(ões) em {reference_entity}.{actual_reference_column}")
-                                    break
-                        if transformations_to_apply:
-                            break
-                
+                reference_table_id = next(
+                    (tid for tid in mapped_rows_by_table
+                     if self.table_config.get_by_id(int(tid)).name == reference_entity),
+                    None
+                )
+                transformations_to_apply, actual_reference_column = \
+                    self._find_transformations_for_reference(reference_entity, reference_table_id, raw_mappings)
+
                 # Aplica transformações se encontradas
                 if transformations_to_apply:
                     print(f"  ⚡ Aplicando transformações da coluna {reference_entity}.{actual_reference_column}")
@@ -675,9 +650,35 @@ class MappingService:
                     print(f"❌ Erro ao resolver FK: {e}")
                     continue
     
+    def _find_transformations_for_reference(
+        self,
+        reference_entity: str,
+        reference_table_id,
+        raw_mappings
+    ):
+        """
+        Procura transformações configuradas para colunas da tabela referenciada.
+
+        Returns:
+            (transformations, column_name) se encontrado, (None, None) caso contrário.
+        """
+        if not reference_table_id:
+            return None, None
+
+        print(f"  🔍 Procurando transformações em colunas de {reference_entity}")
+
+        for mapping in raw_mappings:
+            for mapping_column in mapping.columns:
+                if mapping_column.destiny_table_id == reference_table_id and mapping_column.transformations:
+                    column_name = mapping_column.destiny_column.name
+                    print(f"  ✅ Encontradas {len(mapping_column.transformations)} transformação(ões) em {reference_entity}.{column_name}")
+                    return mapping_column.transformations, column_name
+
+        return None, None
+
     def _apply_transformations(
         self,
-        mapped_rows_by_table: Dict[str, List[Dict]], 
+        mapped_rows_by_table: Dict[str, List[Dict]],
         raw_mappings
     ):
         """
@@ -870,70 +871,40 @@ class MappingService:
         for table_id, rows in mapped_rows_by_table.items():
             if not rows:
                 continue
-            
+
             table = self.table_config.get_by_id(int(table_id))
-            
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # 1. IDENTIFICA COLUNA PK
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
             pk_column = self._get_pk_column_obj(table)
             if not pk_column:
                 continue
-            
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # 2. VERIFICA ESTRATÉGIA DE ID
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            strategy_str = pk_column.id_generation_strategy or 'keep'
-            strategy = IdGenerationStrategy(strategy_str)
-            
-            # Se mantém original, pula
+
+            strategy = IdGenerationStrategy(pk_column.id_generation_strategy or 'keep')
+
             if strategy == IdGenerationStrategy.KEEP:
                 print(f"  ✓ {table.name}.{pk_column.name}: KEEP (mantém original)")
                 continue
-            
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # 3. PEGA CONFIGURAÇÃO
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
             start_value = pk_column.id_start_value or 1
-            
             print(f"  🔧 {table.name}.{pk_column.name}: {strategy.value.upper()} (start={start_value})")
-            
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # 4. PROCESSA CADA LINHA
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
             for idx, row in enumerate(rows):
                 if pk_column.name not in row:
                     continue
-                
-                # Valor original do ID
+
                 old_id = row[pk_column.name]
-                
-                # Gera novo ID
                 new_id = self.id_generator.generate(
                     strategy=strategy,
                     original_value=old_id,
                     entity=table.name,
                     start_value=start_value
                 )
-                
-                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                # 5. REGISTRA MAPEAMENTO
-                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                self.context.register_id_mapping(
-                    entity=table.name,
-                    old_id=old_id,
-                    new_id=new_id
-                )
-                
-                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                # 6. SUBSTITUI ID NA LINHA
-                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                self.context.register_id_mapping(entity=table.name, old_id=old_id, new_id=new_id)
                 row[pk_column.name] = new_id
-                
-                # Debug primeiros 3
+
                 if idx < 3:
                     print(f"     {old_id} → {new_id}")
-            
+
             if len(rows) > 3:
                 print(f"     ... e mais {len(rows) - 3}")
         

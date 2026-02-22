@@ -1,11 +1,13 @@
 import * as Yup from 'yup';
+import type { ColumnForm } from './types/tableForm';
+import { VALIDATION_MESSAGES } from './utils/validationMessages';
 
 export const originTableValidationSchema = Yup.object({
   name: Yup.string()
     .trim()
-    .required('Nome da tabela é obrigatório')
-    .min(3, 'Nome deve ter no mínimo 3 caracteres')
-    .max(100, 'Nome deve ter no máximo 100 caracteres'),
+    .required(VALIDATION_MESSAGES.TABLE_NAME_REQUIRED)
+    .min(3, VALIDATION_MESSAGES.TABLE_NAME_MIN)
+    .max(100, VALIDATION_MESSAGES.TABLE_NAME_MAX),
 
   columns: Yup.array()
     .of(
@@ -13,19 +15,22 @@ export const originTableValidationSchema = Yup.object({
         id: Yup.mixed().required(),
         name: Yup.string()
           .trim()
-          .required('Nome da coluna é obrigatório')
-          .min(1, 'Nome da coluna não pode estar vazio')
-          .max(64, 'Nome da coluna deve ter no máximo 64 caracteres'),
+          .required(VALIDATION_MESSAGES.COLUMN_NAME_REQUIRED)
+          .min(1, VALIDATION_MESSAGES.COLUMN_NAME_MIN)
+          .max(64, VALIDATION_MESSAGES.COLUMN_NAME_MAX),
         type: Yup.string()
-          .required('Tipo é obrigatório')
-          .oneOf(['text', 'number', 'date', 'boolean'], 'Tipo inválido'),
+          .required(VALIDATION_MESSAGES.COLUMN_TYPE_REQUIRED)
+          .oneOf(
+            ['text', 'number', 'date', 'boolean'],
+            VALIDATION_MESSAGES.COLUMN_TYPE_INVALID,
+          ),
         is_natural_key: Yup.boolean(),
       }),
     )
-    .min(1, 'A tabela deve ter pelo menos uma coluna')
+    .min(1, VALIDATION_MESSAGES.COLUMN_MIN)
     .test(
       'unique-column-names',
-      'Nomes de colunas devem ser únicos',
+      VALIDATION_MESSAGES.COLUMN_DUPLICATE,
       function (columns) {
         if (!columns || columns.length === 0) return true;
         const names = columns
@@ -36,15 +41,11 @@ export const originTableValidationSchema = Yup.object({
     ),
 
   is_pk: Yup.mixed()
-    .required('Selecione uma coluna como Primary Key')
-    .test(
-      'pk-exists',
-      'A Primary Key selecionada não existe nas colunas',
-      function (value) {
-        if (!value) return false;
-        const { columns } = this.parent;
-        if (!columns || columns.length === 0) return false;
-        return columns.some((col: any) => col.id === value);
-      },
-    ),
+    .required(VALIDATION_MESSAGES.PK_REQUIRED)
+    .test('pk-exists', VALIDATION_MESSAGES.PK_INVALID, function (value) {
+      if (!value) return false;
+      const { columns } = this.parent;
+      if (!columns || columns.length === 0) return false;
+      return columns.some((col: ColumnForm) => col.id === value);
+    }),
 });

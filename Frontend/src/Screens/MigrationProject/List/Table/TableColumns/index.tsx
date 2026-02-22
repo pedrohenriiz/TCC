@@ -1,9 +1,18 @@
 import { Eye, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TableButton from '../../../../../components/TableButton';
+import { createColumn } from '../../../../../components/DataTable/createColumns';
 
 interface TableColumnProps {
   onOpenDeleteModal: (row: { id: number; name: string }) => void;
+}
+
+interface MigrationProjectDataProps {
+  id: number;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
@@ -13,36 +22,42 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
     navigate(`/migration-project/${row.id}`);
   };
 
+  const col = createColumn<MigrationProjectDataProps>();
+
   const columns = [
-    {
-      name: 'name',
+    col({
+      key: 'name',
       header: 'Nome',
-      accessor: (row: { name: string }) => row.name,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-    },
-    {
-      name: 'description',
+      accessor: (row) => row.name,
+    }),
+
+    col({
+      key: 'description',
       header: 'Descrição',
-      accessor: (row: { description: string }) => row.description,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-    },
-    {
-      name: 'created_at',
+      accessor: (row) => row.description,
+    }),
+
+    col({
+      key: 'created_at',
       header: 'Criado em',
-      accessor: (row: { created_at: Date }) => row.created_at,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: Date) => {
+      accessor: (row) => row.created_at,
+      render: (value) => {
         if (!value) return '-';
+
         const date = new Date(value);
+
         return (
           <span className='text-sm text-gray-600'>
             {date.toLocaleDateString('pt-BR', {
@@ -53,18 +68,21 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
           </span>
         );
       },
-    },
-    {
-      name: 'updated_at',
+    }),
+
+    col({
+      key: 'updated_at',
       header: 'Atualizado em',
-      accessor: (row: { updated_at: Date }) => row.updated_at,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: Date) => {
+      accessor: (row) => row.updated_at,
+      render: (value) => {
         if (!value) return '-';
+
         const date = new Date(value);
+
         return (
           <span className='text-sm text-gray-600'>
             {date.toLocaleDateString('pt-BR', {
@@ -75,17 +93,18 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
           </span>
         );
       },
-    },
-    {
-      name: 'actions',
+    }),
+
+    col({
+      key: 'actions',
       header: 'Ações',
-      accessor: () => null,
       sortable: false,
       searchable: false,
       headerAlign: 'text-center',
       cellAlign: 'text-center',
       width: '150px',
-      render: (_: null, row: { id: number; name: string }) => (
+      accessor: () => null,
+      render: (_, row) => (
         <div className='flex items-center justify-center gap-2'>
           <TableButton
             Icon={<Eye className='w-4 h-4' />}
@@ -102,7 +121,7 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
           />
         </div>
       ),
-    },
+    }),
   ];
 
   return columns;

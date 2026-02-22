@@ -43,14 +43,8 @@ export default function TableConfigsList() {
         <PagetTitle title='Migrare - Configuração das Tabelas' />
         <Header />
 
-        <div className='bg-white rounded-lg shadow-lg overflow-hidden'>
-          <div className='overflow-x-auto'>
-            {isLoading ? (
-              <p>Carregando...</p>
-            ) : (
-              <DataTable columns={columns} data={data} />
-            )}
-          </div>
+        <div className='overflow-hidden border border-gray-200 rounded-xl shadow-sm bg-white'>
+          <DataTable columns={columns} data={data} isLoading={isLoading} />
         </div>
       </div>
 

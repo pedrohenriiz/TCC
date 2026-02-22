@@ -17,7 +17,6 @@ export default function Form({
           label='Nome do Projeto'
           name='name'
           placeholder='Ex: Migração Cliente ABC'
-          helpText='Escolha um nome descritivo para identificar facilmente este projeto'
           required
           formik={formik}
         />
@@ -26,8 +25,6 @@ export default function Form({
           label='Descrição'
           name='description'
           placeholder='Ex: Migração do sistema legado...'
-          helpText='Descreva o objetivo e escopo desta migração'
-          required
           formik={formik}
         />
       </div>

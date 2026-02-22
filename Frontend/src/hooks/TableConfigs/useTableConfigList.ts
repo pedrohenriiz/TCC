@@ -6,7 +6,12 @@ export function useTableConfigs() {
 
   return useQuery({
     queryKey: ['tableConfigs'],
-    queryFn: getTableConfigs,
+    queryFn: () =>
+      getTableConfigs({
+        params: {
+          with_columns: false,
+        },
+      }),
     staleTime: cache,
   });
 }

@@ -1,48 +1,86 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 
-// ============= COMPONENTE PRINCIPAL =============
-export default function DataTable({
+export interface ColumnDataProps<TRow, TValue = unknown> {
+  key: string;
+  header: string;
+  sortable?: boolean;
+  searchable?: boolean;
+  headerAlign?: string;
+  cellAlign?: string;
+  width?: string;
+
+  accessor: (row: TRow) => TValue;
+  render?: (value: TValue, row: TRow, index: number) => React.ReactNode;
+}
+
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig {
+  key: string | null;
+  direction: SortDirection;
+}
+
+interface DataTableProps<TRow> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columns: ColumnDataProps<TRow, any>[];
+  data: TRow[];
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+  className?: string;
+  isLoading?: boolean;
+}
+
+export default function DataTable<T>({
   columns,
   data,
   searchable = false,
   searchPlaceholder = 'Buscar...',
   emptyMessage = 'Nenhum registro encontrado',
   className = '',
-}) {
+  isLoading = false,
+}: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: null,
+    direction: 'asc',
+  });
 
   // Filtrar dados pela busca
   const filteredData = searchable
-    ? data.filter((row) => {
-        return columns.some((col) => {
+    ? data.filter((row) =>
+        columns.some((col) => {
           if (!col.searchable) return false;
           const value = col.accessor(row);
-          return String(value).toLowerCase().includes(searchTerm.toLowerCase());
-        });
-      })
+          return String(value ?? '')
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        }),
+      )
     : data;
 
   // Ordenar dados
   const sortedData = React.useMemo(() => {
     if (!sortConfig.key) return filteredData;
 
-    return [...filteredData].sort((a, b) => {
-      const column = columns.find((col) => col.key === sortConfig.key);
-      if (!column?.sortable) return 0;
+    const column = columns.find((col) => col.key === sortConfig.key);
+    if (!column?.sortable) return filteredData;
 
-      const aValue = column.accessor(a);
-      const bValue = column.accessor(b);
+    return [...filteredData].sort((a, b) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aValue = column.accessor(a) as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bValue = column.accessor(b) as any;
 
       if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredData, sortConfig, columns]);
+  }, [columns, filteredData, sortConfig]);
 
   // Função de ordenação
-  const handleSort = (columnKey) => {
+  const handleSort = (columnKey: string) => {
     const column = columns.find((col) => col.key === columnKey);
     if (!column?.sortable) return;
 
@@ -115,7 +153,16 @@ export default function DataTable({
             </tr>
           </thead>
           <tbody className='divide-y'>
-            {sortedData.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className='px-6 py-12 text-center bg-gray-100'
+                >
+                  <p className='text-center font-bold'>Carregando...</p>
+                </td>
+              </tr>
+            ) : sortedData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
@@ -134,7 +181,7 @@ export default function DataTable({
                     >
                       {column.render
                         ? column.render(column.accessor(row), row, rowIndex)
-                        : column.accessor(row)}
+                        : String(column.accessor(row) ?? '-')}
                     </td>
                   ))}
                 </tr>

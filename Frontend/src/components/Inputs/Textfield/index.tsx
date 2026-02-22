@@ -7,6 +7,7 @@ interface FormInputProps {
   placeholder?: string;
   helpText?: string;
   required?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formik: any;
 }
 
@@ -24,9 +25,12 @@ export default function Textfield({
 
   return (
     <div>
-      <label className='block text-sm font-semibold text-gray-700 mb-2 text-left'>
-        {label} {required && '*'}
-      </label>
+      {label && (
+        <label className='block text-sm font-semibold text-gray-700 mb-2 text-left'>
+          {label} {required && '*'}
+        </label>
+      )}
+
       <input
         type={type}
         name={name}
@@ -34,7 +38,7 @@ export default function Textfield({
         onChange={formik?.handleChange}
         onBlur={formik?.handleBlur}
         placeholder={placeholder}
-        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+        className={`w-full px-4 py-3 border bg-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
           hasError ? 'border-red-500' : 'border-gray-300'
         }`}
         {...rest}

@@ -1,6 +1,6 @@
 import api from '../baseApi';
 
-interface RequestDataProps {
+export interface RequestDataProps {
   id: number;
   name: string;
   columns?:
@@ -24,7 +24,7 @@ export async function updateMigrationProjectOriginTable({
 }) {
   const { data } = await api.patch(
     `/migration-projects/${migrationProjectId}/origin-tables/${id}`,
-    requestData
+    requestData,
   );
 
   return data;

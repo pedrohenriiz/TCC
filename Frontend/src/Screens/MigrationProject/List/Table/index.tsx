@@ -42,11 +42,7 @@ export default function Table() {
   return (
     <>
       <div className='overflow-hidden border border-gray-200 rounded-xl shadow-sm bg-white'>
-        {isLoading ? (
-          <p>Carregando...</p>
-        ) : (
-          <DataTable columns={columns} data={data} />
-        )}
+        <DataTable columns={columns} data={data} isLoading={isLoading} />
       </div>
 
       {showDeleteModal && (

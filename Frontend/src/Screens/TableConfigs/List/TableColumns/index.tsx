@@ -1,9 +1,19 @@
 import { Eye, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TableButton from '../../../../components/TableButton';
+import { createColumn } from '../../../../components/DataTable/createColumns';
 
 interface TableColumnProps {
   onOpenDeleteModal: (row: { id: number }) => void;
+}
+
+interface TableConfigDataProps {
+  id: number;
+  name: string;
+  exhibition_name: string;
+  total_columns: number;
+  total_foreign_keys: number;
+  created_at: Date;
 }
 
 export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
@@ -13,70 +23,76 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
     navigate(`/tables-config/${row.id}`);
   };
 
+  const col = createColumn<TableConfigDataProps>();
+
   const columns = [
-    {
+    col({
       key: 'name',
       header: 'Nome da Tabela',
-      accessor: (row: { name: string }) => row.name,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: string) => (
+      accessor: (row) => row.name,
+      render: (value) => (
         <span className='font-mono font-semibold text-gray-800'>{value}</span>
       ),
-    },
-    {
+    }),
+
+    col({
       key: 'exhibition_name',
       header: 'Nome de Exibição',
-      accessor: (row: { exhibition_name: string }) => row.exhibition_name,
       sortable: true,
       searchable: true,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: string) => <span className='text-gray-700'>{value}</span>,
-    },
-    {
+      accessor: (row) => row.exhibition_name,
+      render: (value) => <span className='text-gray-700'>{value}</span>,
+    }),
+
+    col({
       key: 'total_columns',
       header: 'Colunas',
-      accessor: (row: { total_columns: number }) => row.total_columns,
       sortable: true,
       searchable: false,
       headerAlign: 'text-center',
       cellAlign: 'text-center',
-      render: (value: number) => (
+      accessor: (row) => row.total_columns,
+      render: (value) => (
         <span className='bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium'>
           {value || 0}
         </span>
       ),
-    },
-    {
+    }),
+
+    col({
       key: 'total_foreign_keys',
       header: 'Relacionamentos',
-      accessor: (row: { total_foreign_keys: number }) => row.total_foreign_keys,
       sortable: true,
       searchable: false,
       headerAlign: 'text-center',
       cellAlign: 'text-center',
-      render: (value: number) => {
-        return (
-          <span className='bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium'>
-            {value} FK
-          </span>
-        );
-      },
-    },
-    {
+      accessor: (row) => row.total_foreign_keys,
+      render: (value) => (
+        <span className='bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium'>
+          {value} FK
+        </span>
+      ),
+    }),
+
+    col({
       key: 'created_at',
       header: 'Criado em',
-      accessor: (row: { created_at: Date }) => row.created_at,
       sortable: true,
       searchable: false,
       headerAlign: 'text-left',
       cellAlign: 'text-left',
-      render: (value: Date) => {
+      accessor: (row) => row.created_at,
+      render: (value) => {
         if (!value) return '-';
+
         const date = new Date(value);
+
         return (
           <span className='text-sm text-gray-600'>
             {date.toLocaleDateString('pt-BR', {
@@ -87,17 +103,18 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
           </span>
         );
       },
-    },
-    {
+    }),
+
+    col({
       key: 'actions',
       header: 'Ações',
-      accessor: () => null,
       sortable: false,
       searchable: false,
       headerAlign: 'text-center',
       cellAlign: 'text-center',
       width: '150px',
-      render: (_: any, row: { id: number }) => (
+      accessor: () => null,
+      render: (_, row) => (
         <div className='flex items-center justify-center gap-2'>
           <TableButton
             Icon={<Eye className='w-4 h-4' />}
@@ -114,7 +131,7 @@ export default function TableColumns({ onOpenDeleteModal }: TableColumnProps) {
           />
         </div>
       ),
-    },
+    }),
   ];
 
   return columns;

@@ -2,15 +2,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface SourceTableColumnProps {
-  id?: number;
+export interface SourceTableColumnProps {
+  id: number;
   name: string;
   type: string;
   is_pk: boolean;
   is_natural_key: boolean;
   origin_table_id: number;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
 }
 
 export interface SourceTable {
@@ -18,8 +19,8 @@ export interface SourceTable {
   name: string;
   migration_project_id: number;
   columns: SourceTableColumnProps[];
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface SourceTablesStore {
