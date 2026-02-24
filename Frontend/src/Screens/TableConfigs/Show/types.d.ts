@@ -1,11 +1,12 @@
 import type { FormikProps } from 'formik';
 
-interface TableConfigProps {
+export interface TableConfigProps {
+  id: number;
   name: string;
   exhibition_name: string;
   columns: ColumnProps[];
 }
-interface ColumnProps {
+export interface ColumnProps {
   id: number | string;
   name: string;
   type: string;

@@ -16,6 +16,7 @@ import TableConfigColumnsForm from './TableConfigColumnsForm';
 import type { ColumnProps } from './types';
 import AddColumnsHeader from './AddColumnsHeader';
 import { tableConfigValidationSchema } from './validationSchema';
+import { useToastStore } from '../../../store/useToastStore';
 
 interface OnSubmitFormProps {
   name: string;
@@ -28,6 +29,7 @@ export default function TableConfigsShow() {
   const { id } = useParams();
   const create = useTableConfigCreate();
   const update = useTableConfigUpdate();
+  const { error } = useToastStore();
 
   const formikRef = useRef<FormikProps<OnSubmitFormProps>>(
     {} as FormikProps<OnSubmitFormProps>,
@@ -91,8 +93,8 @@ export default function TableConfigsShow() {
           data: formattedData,
         });
       }
-    } catch (error) {
-      console.error('❌ Erro ao salvar:', error);
+    } catch {
+      error('Falha ao salvar registro!');
     }
   }
 
